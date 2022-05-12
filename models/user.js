@@ -1,13 +1,17 @@
 const mongoose = require('mongoose')
 const userSchema = new mongoose.Schema({
     firstname:{
-        type:String},
+        type:String,default: ""},
     lastname:{
     type:String,
+    default: ""
     },
+    email:String,
+    salt:String,
+    encryptedPassword:String,
     username:{
         type:String,
-        unique:true
+        default: ""
     },    
     isDeleted:{
         type:Boolean,
@@ -15,7 +19,7 @@ const userSchema = new mongoose.Schema({
     },
     isActive:{
         type:Boolean,
-        default:false
+        default:true
     },
     isBlocked:{
         type:Boolean,
@@ -23,7 +27,18 @@ const userSchema = new mongoose.Schema({
     },
     accessToken:{
         type:String,
-    }
+    },
+    image:[],
+    phone:Number,
+    isPhoneVerified : {
+        type:Boolean,
+        default : false
+    },
+    isEmailVerified : {
+        type:Boolean,
+        default : false
+    },
+    OTP:String
 },{
     timestamps:true
 })

@@ -1,3 +1,6 @@
-const Router = require('./routes')
-
-module.exports = Router
+module.exports = {
+    UserRoutes: require("./userRoutes"),
+    AdminRoutes: require("./adminRoutes"),
+    EJS : require('./ejs')
+    // AdminRoutes: require("./routes")
+}

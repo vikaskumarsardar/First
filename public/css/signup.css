@@ -1,0 +1,29 @@
+/* *,html{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body{
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+form {
+    display: flex;
+    flex-direction: column;
+
+    /* align-items: center; */
+    /* justify-content: center; */
+
+    /* background: red; */
+    
+/* } */
+#box{
+    border:5px;
+    background-color: brown;
+    text-align: center;
+    display: grid;
+    justify-items: right;
+}
