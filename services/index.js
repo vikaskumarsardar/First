@@ -9,5 +9,6 @@ module.exports = {
     UploadUserSingle : userMulter.UploadOne, 
     UploadUserMany : userMulter.uploadMany, 
     UploadUserFields : userMulter.uploadFields, 
-    twilio : twilioService
+    twilio : twilioService,
+    nodeMailer : require('./sendMail')
 }

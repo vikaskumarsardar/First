@@ -1,6 +1,7 @@
-const {UserModel} = require('../models')
+const {UserModel, AdminModel} = require('../models')
 const jwt = require('jsonwebtoken')
-const { twilio } = require('../services/')
+const { twilio,nodeMailer } = require('../services/')
+
 exports.userRegister = async(req,res,next) =>{
     try{
         const doesExist  = await UserModel.findOne({$or:[{username:req.body.username},{email:req.body.email},{phone : req.body.phone}]});
@@ -8,10 +9,22 @@ exports.userRegister = async(req,res,next) =>{
         const newUser = new UserModel(req.body)
         const accesstoken = await jwt.sign({_id:newUser._id},process.env.SECRET,{expiresIn:"2h"})
         newUser.accessToken = accesstoken
-        const OTP = await twilio(req.body.countryCode,req.body.phone)    
-        newUser.OTP = OTP
+        console.log(req.body.verifyMethod);
+        if(req.body.verifyMethod == 'phone'){
+            const OTP = await twilio(req.body.countryCode,req.body.phone)    
+            newUser.OTP = OTP
+            newUser.verifyMethod = "phone"
+        }
+        else if(req.body.verifyMethod == "email"){
+            const info = await nodeMailer(req.body.email)
+            newUser.emailOTP = info
+            newUser.verifyMethod = "email"
+        }
+
+
         const savedUser = await newUser.save()
-        res.redirect('/api/user/verify')
+        // res.redirect('/api/user/verify')
+        return res.status(201).json(savedUser)
             
     }catch(err){
         res.status(500).send("Internal Server Error")
@@ -20,15 +33,12 @@ exports.userRegister = async(req,res,next) =>{
 }
 exports.userLogin = async(req,res) =>{
     try{
-        const doesExist  = await UserModel.findOne({$or:[{username:req.body.username},{email:req.body.email}]})
+        const doesExist  = await UserModel.findOne({$or:[{username : req.body.username},{email : req.body.username},{$and : [{phone : req.body.username},{countryCode : req.body.countryCode}]}]})
         if(!doesExist || doesExist.isDeleted) return res.status(400).json({message:"User Not Found"})
-        if(!doesExist.isPhoneVerified){
-            const OTP = await twilio(doesExist.countryCode,doesExist.phone)
-            doesExist.OTP = OTP
-            await doesExist.save()
-           return res.redirect('/api/user/verify');
-        } 
-        if(!doesExist.isValid(req.body.password)) return res.status(400).json({message:"username or password Incorrect"})
+        if(!doesExist.isValid(req.body.password)) return res.status(400).json({message:"Username or Password Incorrect!"})
+        if((doesExist.verifyMethod == "email" && !doesExist.isEmailVerified) || (doesExist.verifyMethod == "phone" && !doesExist.isPhoneVerified)) return res.status(400).json({message:"Your account is not verified"});
+        
+        
         if(doesExist.isBlocked) return res.status(401).send("You are blocked by the admin")
         const accesstoken = await jwt.sign({_id:doesExist._id},process.env.SECRET,{expiresIn:"2h"})
         doesExist.accessToken = accesstoken
@@ -76,9 +86,6 @@ exports.UploadOne = async(req,res) =>{
     catch(err){
         return res.status(500).send("Internal Server Error")
     }
-    
-    
-    
 }
 exports.UploadMany = async(req,res) =>{
     try{
@@ -113,18 +120,50 @@ exports.UploadFields = async(req,res) =>{
 
 exports.Verify = async(req,res) =>{
     try{
-        const userFound = await UserModel.findOne({$and:[{phone:req.body.phone},{countryCode:req.body.countryCode}]})
-        if(!userFound) return res.status(400).json({message:"No User Found to be verified"})
-        if(userFound !== req.body.OTP) {
-            const OTP = await twilio(req.body.countryCode,req.body.phone)
-            userFound.OTP = OTP
-            await userFound.save()
-            return res.redirect('/api/user/verify')
-        }
-        userFound.isPhoneVerified = true
-        await userFound.save()
+        const userFound = await UserModel.findOne({$or:[{$and : [{phone : req.body.phone},{countryCode : req.body.countryCode}]},{email : req.body.email},{emailOTP : req.params.user}]})
+        if(!userFound) return res.status(400).json({message:"No User Found"})
 
-        res.redirect('/api/user/login')
+        if(userFound.verifyMethod == 'email'){
+            if(userFound.emailOTP !== req.params.user) return res.status(400).json({message:"Incorrect Email String"})
+                userFound.isEmailVerified = true
+        }
+        else if(userFound.verifyMethod == 'phone'){
+
+            if(userFound.OTP !== req.body.OTP) return res.status(400).json({message:"Invalid OTP"})
+            userFound.isPhoneVerified = true
+        }
+        const saved = await userFound.save()
+        res.status(200).json(`Mr. ${saved.firstname} you have successfully verified your account`)    
+
+    }
+    catch(err){
+        res.status(500).send("Internal Server Error")
+    }
+}
+
+
+exports.forgetPassword = async(req,res) =>{
+    try{
+        const token = uuidv1()
+        const userFound = await AdminModel.findOneAndUpdate({$or : [{email:req.body.username},{username : req.body.username},{$and:[{phone:req.body.username},{countryCode : req.body.countryCode}]}]},{
+            forgetToken : token,
+            // forgetTokenExpire : Date.now() + 
+        })
+        if(!userFound) return res.status(400).send("No Users Found")
+        
+        
+        
+        
+    }
+    catch(err){
+        res.status(500).send("Internal Server Error")
+    }
+}
+
+
+exports.ResetPassword = async(req,res) =>{
+    try{
+
     }
     catch(err){
         res.status(500).send("Internal Server Error")

@@ -11,7 +11,7 @@ Router.post('/activateDeactivate',VerifyUser,User.activateDeactivate)
 Router.post('/uploadOne',VerifyUser,Multer.UploadUserSingle,User.UploadUserOne)
 Router.post('/uploadMany',VerifyUser,Multer.UploadUserMany,User.UploadUserMany)
 Router.post('/uploadFields',VerifyUser,Multer.UploadUserFields,User.UploadUserFields)
-Router.post('/verify',User.VerifyUser)
+Router.get('/verifyUser/:user',User.VerifyUser)
 
 Router.get('/signup',User.UserSignup)
 Router.get('/login',User.UserLogin)

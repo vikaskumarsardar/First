@@ -29,7 +29,8 @@ const userSchema = new mongoose.Schema({
         type:String,
     },
     image:[],
-    phone:Number,
+    phone:String,
+    countryCode:String,
     isPhoneVerified : {
         type:Boolean,
         default : false
@@ -38,7 +39,9 @@ const userSchema = new mongoose.Schema({
         type:Boolean,
         default : false
     },
-    OTP:String
+    OTP:String,
+    emailOTP:String,
+    verifyMethod:String
 },{
     timestamps:true
 })
