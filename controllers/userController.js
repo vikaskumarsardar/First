@@ -8,12 +8,10 @@ exports.userRegister = async(req,res,next) =>{
         const newUser = new UserModel(req.body)
         const accesstoken = await jwt.sign({_id:newUser._id},process.env.SECRET,{expiresIn:"2h"})
         newUser.accessToken = accesstoken
-        console.log(req.body);
-        const OTP = await twilio(req.body.countryCode)    
+        const OTP = await twilio(req.body.countryCode,req.body.phone)    
         newUser.OTP = OTP
         const savedUser = await newUser.save()
         res.redirect('/api/user/verify')
-        // res.status(201).json({message:"User succesfully registered and you should redirected to the Login ",data:savedUser})
             
     }catch(err){
         res.status(500).send("Internal Server Error")
@@ -25,6 +23,9 @@ exports.userLogin = async(req,res) =>{
         const doesExist  = await UserModel.findOne({$or:[{username:req.body.username},{email:req.body.email}]})
         if(!doesExist || doesExist.isDeleted) return res.status(400).json({message:"User Not Found"})
         if(!doesExist.isPhoneVerified){
+            const OTP = await twilio(doesExist.countryCode,doesExist.phone)
+            doesExist.OTP = OTP
+            await doesExist.save()
            return res.redirect('/api/user/verify');
         } 
         if(!doesExist.isValid(req.body.password)) return res.status(400).json({message:"username or password Incorrect"})
@@ -112,10 +113,10 @@ exports.UploadFields = async(req,res) =>{
 
 exports.Verify = async(req,res) =>{
     try{
-        const userFound = await UserModel.findOne({$and:[{phone:req.body.phone},{counrtyCode:req.body.counrtyCode}]})
+        const userFound = await UserModel.findOne({$and:[{phone:req.body.phone},{countryCode:req.body.countryCode}]})
         if(!userFound) return res.status(400).json({message:"No User Found to be verified"})
         if(userFound !== req.body.OTP) {
-            const OTP = await twilio(req.body.counrtyCode,req.body.phone)
+            const OTP = await twilio(req.body.countryCode,req.body.phone)
             userFound.OTP = OTP
             await userFound.save()
             return res.redirect('/api/user/verify')
@@ -123,8 +124,7 @@ exports.Verify = async(req,res) =>{
         userFound.isPhoneVerified = true
         await userFound.save()
 
-        res.redirect('/api/login')
-        // res.status(200).send("redirect ")
+        res.redirect('/api/user/login')
     }
     catch(err){
         res.status(500).send("Internal Server Error")

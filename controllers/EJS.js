@@ -7,3 +7,6 @@ exports.SignUP = async(req,res,next) =>{
 exports.Login = async(req,res,next) =>{
     res.render('login')
 }
+exports.VerifyOTP = async(req,res,next) =>{
+    res.render('verify')
+}

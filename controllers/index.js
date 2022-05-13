@@ -19,6 +19,7 @@ module.exports = {
     OTP : EJS.OTP,
     VerifyUser : User.Verify,
     UserSignup:EJS.SignUP,
-    UserLogin : EJS.Login
+    UserLogin : EJS.Login,
+    VerifyOTP:EJS.VerifyOTP
 
 }
