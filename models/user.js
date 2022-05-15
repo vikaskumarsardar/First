@@ -41,7 +41,9 @@ const userSchema = new mongoose.Schema({
     },
     OTP:String,
     emailOTP:String,
-    verifyMethod:String
+    verifyMethod:String,
+    expireTokenIn:Number,
+    resetToken:String
 },{
     timestamps:true
 })

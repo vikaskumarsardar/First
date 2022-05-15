@@ -11,12 +11,12 @@ exports.userRegister = async(req,res,next) =>{
         newUser.accessToken = accesstoken
         console.log(req.body.verifyMethod);
         if(req.body.verifyMethod == 'phone'){
-            const OTP = await twilio(req.body.countryCode,req.body.phone)    
+            const OTP = await twilio("verfyPhone",req.body.countryCode,req.body.phone)    
             newUser.OTP = OTP
             newUser.verifyMethod = "phone"
         }
         else if(req.body.verifyMethod == "email"){
-            const info = await nodeMailer(req.body.email)
+            const info = await nodeMailer("verifyEmail",req.body.email)
             newUser.emailOTP = info
             newUser.verifyMethod = "email"
         }
@@ -145,14 +145,21 @@ exports.Verify = async(req,res) =>{
 exports.forgetPassword = async(req,res) =>{
     try{
         const token = uuidv1()
-        const userFound = await AdminModel.findOneAndUpdate({$or : [{email:req.body.username},{username : req.body.username},{$and:[{phone:req.body.username},{countryCode : req.body.countryCode}]}]},{
-            forgetToken : token,
-            // forgetTokenExpire : Date.now() + 
-        })
-        if(!userFound) return res.status(400).send("No Users Found")
-        
-        
-        
+        const userFound = await UserModel.findOne({$or : [{email:req.body.username},{username : req.body.username},{$and : [{phone:req.body.username},{countryCode : req.body.countryCode}]}]})
+        if(!userFound) return res.status(400).send("No User Found")
+        if(!userFound.isEmailVerified || !userFound.isPhoneVerified) return  res.status(400).json({message : "Your account is not verified",verifyMethod:`provide your ${userFound.verifyMethod}`})
+        if(userFound.verifyMethod == "email" && userFound.isEmailVerified){
+            const resetToken = await nodeMailer("forgetPassword",userFound.email)
+            userFound.resetToken = resetToken;
+            userFound.expireTokenIn = Date.now() + 1000000 
+        }
+        if(userFound.verifyMethod == "phone" && userFound.isPhoneVerified){
+            const resetToken = await twilio("forgetPassword",userFound.countryCode,userFound.phone)
+            userFound.resetToken = resetToken;
+            userFound.expireTokenIn = Date.now() + 10000000 
+        }
+        await userFound.save()
+        res.status(200).json({message:"please check your email to reset password"})
         
     }
     catch(err){
@@ -163,11 +170,33 @@ exports.forgetPassword = async(req,res) =>{
 
 exports.ResetPassword = async(req,res) =>{
     try{
-
+        if(req.body.password === req.body.confirmPassword){
+            const userFound = await UserModel.findOne({resetToken:req.params.token,expireTokenIn:{$gt : Date.now()}})
+            if(!userFound) return res.status(400).json({message:"your token is expired"})
+            userFound.expireTokenIn = null
+            if(!userFound.resetPassword(req.body.password)) return res.status(500).json({message:"somthing went wrong during password resetting"})
+            await userFound.save()
+            res.status(200).json({message: "Password Changed successfully"})
+            
+        }
+        return res.status(400).json({message : "password and confirm password are not same"})
     }
     catch(err){
         res.status(500).send("Internal Server Error")
     }
 }
 
+
+exports.changePassword = async(req,res) =>{
+    try{
+        const userFound = UserModel.findOne({$or : [{email:req.body.email},{username:req.body.username},{$and:[{countryCode:req.body.countryCode},{phone :req.body.phone}]}]})
+        if(!userFound) return res.status(400).json({message : "User not found"})
+        if(!userFound.isValid(req.body.password)) return res.status(400).json({message : "username or password Incorrect"}) 
+        if(userFound.resetPassword(req.body.password)) return res.status(200).json({message : "Password successfully changed"})
+        res.status(500).json({message:"something went wrong during resetting password"})
+        
+    }catch(err){
+        res.status(500).json({message})
+    }
+}
 

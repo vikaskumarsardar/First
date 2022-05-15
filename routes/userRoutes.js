@@ -12,6 +12,10 @@ Router.post('/uploadOne',VerifyUser,Multer.UploadUserSingle,User.UploadUserOne)
 Router.post('/uploadMany',VerifyUser,Multer.UploadUserMany,User.UploadUserMany)
 Router.post('/uploadFields',VerifyUser,Multer.UploadUserFields,User.UploadUserFields)
 Router.get('/verifyUser/:user',User.VerifyUser)
+Router.post('/forgetPassword',User.forgetPassword)
+Router.post('/ResetPassword',User.ResetPassword)
+Router.post('/changePassword',User.changePassword)
+
 
 Router.get('/signup',User.UserSignup)
 Router.get('/login',User.UserLogin)

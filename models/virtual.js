@@ -10,7 +10,11 @@ module.exports = (Schema) =>{
     
 
     Schema.methods = {
-        
+        resetPassword:function(password){
+            this.encryptedPassword = this.securePassword(password);
+            if(this.encryptedPassword === this.securePassword(password)) return true
+            return false;
+        },        
         isValid:function(plainPassword){
             return this.encryptedPassword === this.securePassword(plainPassword)
         },
