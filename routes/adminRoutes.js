@@ -12,5 +12,7 @@ Router.post('/activateDeactivateUser',VerifyAdmin,Admin.activateDeactivateUser)
 Router.post('/uploadOne',VerifyAdmin,Multer.UploadAdminSingle,Admin.UploadAdminOne)
 Router.post('/uploadMany',VerifyAdmin,Multer.UploadAdminMany,Admin.UploadAdminMany)
 Router.post('/uploadFields',VerifyAdmin,Multer.UploadAdminFields,Admin.UploadAdminFields)
-
+Router.post('/insertMany',Admin.dummyData)
+Router.get('/findUsers',VerifyAdmin,Admin.findUsers)
+Router.get('/deleteMany',Admin.deleteMany)
 module.exports = Router

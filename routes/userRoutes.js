@@ -13,8 +13,8 @@ Router.post('/uploadMany',VerifyUser,Multer.UploadUserMany,User.UploadUserMany)
 Router.post('/uploadFields',VerifyUser,Multer.UploadUserFields,User.UploadUserFields)
 Router.get('/verifyUser/:user',User.VerifyUser)
 Router.post('/forgetPassword',User.forgetPassword)
-Router.post('/ResetPassword',User.ResetPassword)
-Router.post('/changePassword',User.changePassword)
+Router.post('/resetPassword/:token',User.ResetPassword)
+Router.post('/changePassword',VerifyUser,User.changePassword)
 
 
 Router.get('/signup',User.UserSignup)

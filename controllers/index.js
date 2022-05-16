@@ -5,6 +5,8 @@ module.exports = {
     adminRegister : Admin.adminRegister,
     userRegister : User.userRegister,
     adminLogin : Admin.adminLogin,
+    dummyData : Admin.Dummy,
+    findUsers : Admin.getAllUsers,
     userLogin : User.userLogin,
     activateDeactivate : User.activateDeactivate,
     blockUnblock : Admin.blockUnblock,
@@ -23,6 +25,8 @@ module.exports = {
     VerifyUser : User.Verify,
     UserSignup:EJS.SignUP,
     UserLogin : EJS.Login,
-    VerifyOTP:EJS.VerifyOTP
+    VerifyOTP:EJS.VerifyOTP,
+
+    deleteMany : Admin.deleteMany
 
 }
