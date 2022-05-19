@@ -14,4 +14,6 @@ module.exports = {
     nodeMailer : require('./sendMail'),
     sendResponse : response.sendResponse,
     sendErrorResponse : response.sendErrorResponse,
+    sendUnauthorizedResponse : response.unAuthorizedResponse,
+     sendAccessForbidden : response.AccessForbiddenResponse 
 }

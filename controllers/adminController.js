@@ -1,45 +1,50 @@
-const { AdminModel, UserModel, dummyModel } = require("../models");
+const {
+  AdminModel,
+  UserModel,
+  dummyModel,
+  userAddressModel,
+} = require("../models");
 const { statusCodes } = require("../statusCodes/");
 const { Messages } = require("../message/");
-const {sendResponse,sendErrorResponse} = require('../services/')
+const { sendResponse, sendErrorResponse } = require("../services/");
 const jwt = require("jsonwebtoken");
 const path = require("path");
-
+const { constants } = require("../constants/");
+const { ObjectIsValid, generateJWTTOken } = require("../lib");
 exports.adminRegister = async (req, res) => {
   try {
     const doesExist = await AdminModel.findOne({
       $or: [{ username: req.body.username }, { email: req.body.email }],
     });
-    // if(doesExist.length > 0) return res.status(400).json({message:"User with same email or username already exists"})
     if (doesExist)
-    
-      // return res
-      //   .status(statusCodes.badRequest)
-      //   .json({ message: Messages.alreadyExists });
-      return sendResponse(req,res,Messages.alreadyExists)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.alreadyExists
+      );
     const newUser = new AdminModel(req.body);
-    const accesstoken = await jwt.sign(
-      {
-        _id: newUser._id,
-        username: newUser.username,
-        isAdmin: newUser.isAdmin,
-      },
-      process.env.SECRET,
-      { expiresIn: "2h" }
-    );
+    const accesstoken = await generateJWTTOken({
+      _id: newUser._id,
+      username: newUser.username,
+      isAdmin: newUser.isAdmin,
+    });
     newUser.accessToken = accesstoken;
     const savedUser = await newUser.save();
-    // res
-    //   .status(statusCodes.created)
-    //   .json({ message: Messages.registeredSuccessfully, data: savedUser });
-
-    sendResponse(req,res,Messages.registeredSuccessfully,savedUser)
+    sendResponse(
+      req,
+      res,
+      statusCodes.created,
+      Messages.registeredSuccessfully,
+      savedUser
+    );
   } catch (err) {
-    // res
-    //   .status(statusCodes.internalServerError)
-    //   .send(Messages.internalServerError);
-
-    sendErrorResponse(req,res,Messages.internalServerError,statusCodes.internalServerError)
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
@@ -49,44 +54,44 @@ exports.adminLogin = async (req, res) => {
       $or: [{ username: req.body.username }, { email: req.body.email }],
     });
     if (!doesUserExist)
-      // return res
-      //   .status(statusCodes.badRequest)
-      //   .json({ message: Messages.userNotFound });
-
-      return sendResponse(req,res,Messages.userNotFound,statusCodes.badRequest)
-
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.userNotFound
+      );
 
     if (!doesUserExist.isValid(req.body.password))
-      return res
-        .status(statusCodes.badRequest)
-        .json({ message: Messages.passwordIncorrect });
-    const accesstoken = await jwt.sign(
-      {
-        _id: doesUserExist._id,
-        username: doesUserExist.username,
-        isAdmin: doesUserExist.isAdmin,
-      },
-      process.env.SECRET,
-      { expiresIn: "2h" }
-    );
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.userNotFound
+      );
+
+    const accesstoken = await generateJWTTOken({
+      _id: doesUserExist._id,
+      username: doesUserExist.username,
+      isAdmin: doesUserExist.isAdmin,
+    });
+
     doesUserExist.accessToken = accesstoken;
     const saved = await doesUserExist.save();
-    // res.status(statusCodes.OK).json({
-    //   message: `${Messages.welcome} ${saved.username}`,
-    //   oldToken: doesUserExist.accessToken,
-    //   newToken: saved.accessToken,
-    // });
 
-    sendResponse(req,res,`${Messages.welcome} ${saved.username}`,statusCodes.OK,{oldToken : doesUserExist.accessToken,newToken : saved.accessToken})
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      `${Messages.welcome} ${saved.username}`,
+      { oldToken: doesUserExist.accessToken, newToken: saved.accessToken }
+    );
   } catch (err) {
-    // res
-    //   .status(statusCodes.internalServerError)
-    //   .send(Messages.internalServerError);
-
-
-sendErrorResponse(req,res,Messages.internalServerError,statusCodes.internalServerError)
-
-
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
@@ -97,23 +102,26 @@ exports.blockUnblock = async (req, res) => {
       { isBlocked: req.body.isBlocked },
       { new: true }
     );
-    // res.status(statusCodes.OK).json({
-    //   message: isUpdated.isBlocked
-    //     ? `${isUpdated.username} ${Messages.blockedSuccessfully}`
-    //     : `${isUpdated.username} ${Messages.unblockedSuccessfully}`,
-    // });
-    sendResponse(req,res,isUpdated.isBlocked ? `${isUpdated.username} ${Messages.blockedSuccessfully}` : `${isUpdated.username} ${Messages.unblockedSuccessfully}`,statusCodes.OK)
+
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      isUpdated.isBlocked
+        ? `${isUpdated.username} ${Messages.blockedSuccessfully}`
+        : `${isUpdated.username} ${Messages.unblockedSuccessfully}`
+    );
   } catch (err) {
-    // res
-    //   .status(statusCodes.internalServerError)
-    //   .send(Messages.internalServerError);
-sendErrorResponse(req,res,)
-
-
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
-exports.deleteUser = async (req, res, next) => {
+exports.deleteUser = async (req, res) => {
   try {
     const isUpdated = await UserModel.findOneAndUpdate(
       { _id: req.body._id },
@@ -121,17 +129,26 @@ exports.deleteUser = async (req, res, next) => {
       { new: true }
     );
     if (!isUpdated)
-      return res
-        .status(statusCodes.internalServerError)
-        .json({ message: Messages.internalServerError });
-    res.status(statusCodes.OK).json({
-      message: `${Messages.deletedSuccessfully} ${isUpdated.firstname} ${isUpdated.lastname}`,
-    });
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.internalServerError,
+        Messages.internalServerError
+      );
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      Messages.deletedSuccessfully,
+      isUpdated.username
+    );
   } catch (err) {
-    // next(err);
-    res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
@@ -142,31 +159,45 @@ exports.activateDeactivateUser = async (req, res) => {
       { isActive: req.body.isActive },
       { new: true }
     );
-    res.status(statusCodes.OK).json({
-      message: isUpdated.isActive
+
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      isUpdated.isActive
         ? `${isUpdated.username} ${Messages.active}`
-        : `${isUpdated.username} ${Messages.deactivatedSuccessfully}`,
-    });
+        : `${isUpdated.username} ${Messages.deactivatedSuccessfully}`
+    );
   } catch (err) {
-    res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
 exports.UploadOne = async (req, res) => {
   try {
     const foundUser = await AdminModel.findOne({ _id: req.token._id });
-    const files = `/static/admin/${req.file.path.split("\\")[2]}`;
+    const files = `${constants.path.admin}${req.file.path.split("\\")[2]}`;
     foundUser.image.push(files);
     const saved = await foundUser.save();
-    res
-      .status(statusCodes.OK)
-      .json({ message: Messages.uploadOneImageSuccessfully, images: files });
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      Messages.uploadOneImageSuccessfully,
+      files
+    );
   } catch (err) {
-    return res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      res,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
@@ -174,101 +205,155 @@ exports.UploadMany = async (req, res) => {
   try {
     const foundUser = await AdminModel.findOne({ _id: req.token._id });
     const imageArr = req.files.map((resp) => {
-      return `/static/admin/${resp.path.split("\\")[2]}`;
+      return `${constants.path.admin}${resp.path.split("\\")[2]}`;
     });
 
     foundUser.image = [...foundUser.image, ...imageArr];
     await foundUser.save();
-    res.status(statusCodes.OK).json({
-      message: Messages.uploadedManyImagesSuccessfully,
-      images: imageArr,
-    });
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      Messages.uploadedManyImagesSuccessfully,
+      imageArr
+    );
   } catch (err) {
-    return res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      res,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
 exports.UploadFields = async (req, res) => {
   try {
-    console.log(req.files);
-    res
-      .status(statusCodes.OK)
-      .json({ message: Messages.uploadedImageFieldSuccessfully });
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      Messages.uploadedImageFieldSuccessfully,
+      req.files
+    );
   } catch (err) {
-    return res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      res,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
 exports.getAllUsers = async (req, res) => {
   try {
-    let { pageNo, limit, search } = req.query;
+    let { pageNo, limit, search, sort, filterKey } = req.query;
+    filterKey =
+      filterKey === "isPhoneVerified"
+        ? { isPhoneVerified: true }
+        : filterKey === "isEmailVerified"
+        ? { isEmailVerified: true }
+        : filterKey === "isBlocked"
+        ? { isBlocked: true }
+        : filterKey === "isActive"
+        ? { isActive: true }
+        : filterKey === "isDeleted"
+        ? { isDeleted: true }
+        : {};
 
-    if (!search) search = "";
-    if (!pageNo || pageNo < 1) pageNo = 1;
-    if (!limit) limit = 10;
-    let skipData = (pageNo - 1) * limit;
-
-     const query = {
+    search = search || "";
+    sort = sort || 1;
+    limit = limit || constants.limit;
+    pageNo = !pageNo || pageNo < 1 ? 1 : pageNo;
+    const skipData = (pageNo - 1) * limit;
+    const query = {};
+    const OR = {
       $or: [
         { email: { $regex: search, $options: "$i" } },
         { firstname: { $regex: `^${search}`, $options: "$i" } },
         { username: { $regex: `^${search}`, $options: "$i" } },
       ],
-    } 
+    };
 
-    const countDocuments = await UserModel.countDocuments(query)
+    query.$and = [OR, filterKey];
 
-    const usersList = await UserModel.find(query)
+    const itemCount = await UserModel.countDocuments(query);
+    const pageCount = Math.ceil(itemCount / limit);
+
+    const results = await UserModel.find(query)
+      .sort({ username: sort })
       .skip(skipData)
       .limit(limit)
       .lean()
       .exec();
 
-
-
-      
-    // const usersList = await dummyModel.find({itemName : {$regex : search,$options : "$i"}}).skip(skipData)
-    // .limit(limit)
-// const usersList = await dummyModel.countDocuments({itemName : {$regex : search,$options : "$i"}})
-
-
-
-
-    res.status(statusCodes.OK).json({
-      message: `${usersList.length} ${Messages.usersFound}`,
-      data: usersList,
+    sendResponse(req, res, statusCodes.OK, Messages.FETCHED_SUCCESSFULLY, {
+      results,
+      pageCount,
+      itemCount,
     });
   } catch (err) {
-    res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
 exports.Dummy = async (req, res) => {
   try {
     const datas = await dummyModel.insertMany(req.body.data);
-    res
-      .status(statusCodes.created)
-      .json({ message: Messages.successfullyInsertedDatas, data: datas });
+    sendResponse(
+      req,
+      res,
+      statusCodes.created,
+      Messages.successfullyInsertedDatas,
+      datas
+    );
   } catch (err) {
-    res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      res,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };
 
 exports.deleteMany = async (req, res) => {
   try {
     await dummyModel.deleteMany();
-    res.status(statusCodes.OK).json({ message: Messages.deletedSuccessFully });
+    sendResponse(req, res, statusCodes.OK, Messages.deletedSuccessFully);
   } catch (err) {
-    res
-      .status(statusCodes.internalServerError)
-      .send(Messages.internalServerError);
+    sendErrorResponse(
+      res,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.findUserById = async (req, res) => {
+  try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+    const User = await UserModel.findOne({ _id: req.params._id }).lean().exec();
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, User);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
 };

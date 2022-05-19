@@ -1,3 +1,3 @@
 module.exports = {
-                statusCodes : require('./statusCodes')
-}
+  statusCodes: require("./statusCodes"),
+};

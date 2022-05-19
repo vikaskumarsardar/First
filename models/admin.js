@@ -29,7 +29,15 @@ const adminSchema = new mongoose.Schema({
         type:Boolean,
         default : false
     },
+    merchantId : [
+        {
+            type : mongoose.Types.ObjectId,
+            ref : "Merchant"
+        }
+    ]
     
+},{
+    timestamps:true
 })
 
 
