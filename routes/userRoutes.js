@@ -25,6 +25,9 @@ Router.post(
   Multer.UploadUserFields,
   User.UploadUserFields
 );
+
+
+// USER ROUTES
 Router.get("/verifyUser/:user", User.VerifyUser);
 Router.post("/forgetPassword", User.forgetPassword);
 Router.post("/resetPassword/:token", User.ResetPassword);
@@ -39,6 +42,8 @@ Router.put("/updateAddress", VerifyUser, User.updateUserAddress);
 Router.post("/updateUserProfile", VerifyUser, User.updateUserProfile);
 Router.delete("/deleteAddress", VerifyUser, User.deleteUserAddress);
 
-Router.get('/getAllDummyData',VerifyUser,User.getAllDummyData)
+
+// DUMMY ROUTES
+Router.get("/getAllDummyData", VerifyUser, User.getAllDummyData);
 
 module.exports = Router;

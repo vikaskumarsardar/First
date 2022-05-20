@@ -24,11 +24,11 @@ Router.post("/updateSubCategory",VerifyMerchant, merchant.updateSubCategory);
 Router.get("/getAllSubCategory",VerifyMerchant, merchant.getAllSubCategory);
 Router.get("/getSubCategoryById",VerifyMerchant, merchant.getSubCategoryById);
 Router.get("/blockUnblockSubCategory",VerifyMerchant, merchant.blockUnblockSubCategory);
+Router.post("/uploadMerchantImage",VerifyMerchant,uploadMerchantImage, merchant.uploadMerchantImage);
 
 // PRODUCT ROUTES
 Router.get("/addProduct",VerifyMerchant, merchant.addProduct);
-Router.delete("/deleteProductById",VerifyMerchant, merchant.deleteProductById);
-Router.put("/updateProductById",VerifyMerchant,merchant.updateProductById);
-Router.post("/uploadMerchantImage",VerifyMerchant,uploadMerchantImage, merchant.uploadMerchantImage);
+Router.delete("/deleteProductById:_id",VerifyMerchant, merchant.deleteProductById);
+Router.put("/updateProductById/:_id",VerifyMerchant,merchant.updateProductById);
 
 module.exports = Router;

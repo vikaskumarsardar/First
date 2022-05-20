@@ -1,6 +1,6 @@
 module.exports = {
   UserRoutes: require("./userRoutes"),
   AdminRoutes: require("./adminRoutes"),
-  merchantRoutes : require('./merchantRoutes'),
+  merchantRoutes: require("./merchantRoutes"),
   EJS: require("./ejs"),
 };
