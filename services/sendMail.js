@@ -1,6 +1,6 @@
 const nodeMailer = require("nodemailer");
 const { v1: uuidv1 } = require("uuid");
-const mailerService = async (route, email) => {
+const mailerService = async (route, email,password = "") => {
   const host = email.split("@")[1];
   try {
     const emailString = uuidv1();
@@ -48,7 +48,7 @@ const mailerService = async (route, email) => {
                     <h4>Cart Team</h4>
                     </p>`;
     }
-    if (route === "resendOTPForVerification") {
+    else if (route === "resendOTPForVerification") {
       subject = "Verify Your Email This is another link";
       html = `<h1 style="text-align:left; color:#00b9ee;">Welcome To Shopping Cart</h1>
                     <div></div>
@@ -64,6 +64,27 @@ const mailerService = async (route, email) => {
                     <h4>    Thanks,</h4>
                     <h4>Cart Team</h4>
                     </p>`;
+    }
+    else if(route === "sendCredential"){
+      subject = "Credentials for Food App"
+      html = `
+      <h1 style="text-align:left; color:#00b9ee;">Welcome To Food App</h1>
+                    <div></div>
+                    <br><p style="text-align:left;color:#000; font-size:20px;">
+                    <b>Hello, there!</b></p>
+                    <p style="text-align:left;color:#000;font-size: 14px;">
+                    <b>Thanks for creating a Food App account. Here are your Credentials regarding the same .</b> </p>
+                    <br><div style="display:inline-block;background:#00b9ee; padding:10px;-webkit-border-radius: 10px; -moz-border-radius: 4px; border-radius: 4px;">
+                      <h4>  
+                      password : ${password}
+                      </h4>
+                    <br><br>
+                    <p style="text-align:left;color:#000; font-size: 14px;">    
+                    <h4>    Thanks,</h4>
+                    <h4>Food App Team</h4>
+                    </p>
+      
+      `
     }
 
     await transporter.sendMail({

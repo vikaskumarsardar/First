@@ -1,6 +1,6 @@
 const { UserModel, AdminModel, userAddressModel,dummyModel } = require("../models");
 const jwt = require("jsonwebtoken");
-const { twilio, nodeMailer, response, error, send } = require("../services/");
+const { twilio, nodeMailer} = require("../services/");
 const { Messages } = require("../message/");
 const { statusCodes } = require("../statusCodes/");
 const { sendResponse, sendErrorResponse } = require("../services/");

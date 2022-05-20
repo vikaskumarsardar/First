@@ -1,55 +1,59 @@
-const mongoose = require('mongoose')
-const userSchema = new mongoose.Schema({
-    firstname:{
-        type:String,default: ""},
-    lastname:{
-    type:String,
-    default: ""
+const mongoose = require("mongoose");
+const userSchema = new mongoose.Schema(
+  {
+    firstname: {
+      type: String,
+      default: "",
     },
-    email:String,
-    salt:String,
-    encryptedPassword:String,
-    username:{
-        type:String,
-        default: ""
-    },    
-    isDeleted:{
-        type:Boolean,
-        default:false
+    lastname: {
+      type: String,
+      default: "",
     },
-    isActive:{
-        type:Boolean,
-        default:true
+    email: String,
+    salt: String,
+    encryptedPassword: String,
+    username: {
+      type: String,
+      default: "",
     },
-    isBlocked:{
-        type:Boolean,
-        default:false
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
-    accessToken:{
-        type:String,
+    isActive: {
+      type: Boolean,
+      default: true,
     },
-    image:[],
-    phone:String,
-    countryCode:String,
-    isPhoneVerified : {
-        type:Boolean,
-        default : false
+    isBlocked: {
+      type: Boolean,
+      default: false,
     },
-    isEmailVerified : {
-        type:Boolean,
-        default : false
+    accessToken: {
+      type: String,
     },
-    OTP:String,
-    emailOTP:String,
-    verifyMethod:String,
-    expireTokenIn:Number,
-    resetToken:String
-},{
-    timestamps:true
-})
+    image: [],
+    phone: String,
+    countryCode: String,
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    OTP: String,
+    emailOTP: String,
+    verifyMethod: String,
+    expireTokenIn: Number,
+    resetToken: String,
+  },
+  {
+    timestamps: true,
+  }
+);
 
+require("./virtual")(userSchema);
 
-require('./virtual')(userSchema)
-
-const userModel = mongoose.model("Users",userSchema)
-module.exports = userModel
+const userModel = mongoose.model("Users", userSchema);
+module.exports = userModel;

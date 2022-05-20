@@ -2,14 +2,14 @@ const mongoose = require("mongoose");
 const productSchema = new mongoose.Schema(
   {
     productName: String,
-    brand : String,
+    brand: String,
     price: Number,
-    oldPrice : String,
+    oldPrice: String,
     quantity: Number,
     ratings: Number,
     image: String,
     description: String,
-    discount: Number,
+    discount: { discountType: String, discount: Number },
     categoryId: {
       type: mongoose.Types.ObjectId,
       ref: "Category",

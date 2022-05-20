@@ -1,5 +1,6 @@
 const adminMulter = require('./adminMulter')
 const userMulter = require('./userMulter')
+const merchant = require('./merchantMulter')
 const twilioService = require('./twilio') 
 const response = require('./Response')
 
@@ -15,5 +16,6 @@ module.exports = {
     sendResponse : response.sendResponse,
     sendErrorResponse : response.sendErrorResponse,
     sendUnauthorizedResponse : response.unAuthorizedResponse,
-     sendAccessForbidden : response.AccessForbiddenResponse 
+     sendAccessForbidden : response.AccessForbiddenResponse ,
+     uploadMerchantImage : merchant.uploadMerchantImage
 }

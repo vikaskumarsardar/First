@@ -10,4 +10,3 @@
 
 // const result = password.match(/[a-z]/g)
 // console.log(result)
-

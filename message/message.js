@@ -50,6 +50,12 @@ module.exports = {
   RESET_OTP: "Your Reset OTP for Expandimo is",
   RESEND_OTP: "Your resent OTP for Expandimo is",
   NO_DATA : "No data found",
+  NO_SUB_CATEGORY : "No Subcategory found",
+  NO_CATEGORY : "No Category found",
   DEFAULT_BODY : "default body",
-  NO_ADDRESS_FOUND : "NO ADDRESS FOUND"
+  NO_ADDRESS_FOUND : "NO ADDRESS FOUND",
+  ACCOUNT_CREDENTIAL : "sendCredential",
+  NO_PRODUCT_FOUND : "NO  PRODUCTS FOUND",
+  MERCHANT_NOT_FOUND : 'MERCHNAT NOT FOUND',
+  
 };

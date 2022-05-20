@@ -3,10 +3,14 @@ const {
   UserModel,
   dummyModel,
   userAddressModel,
+  merchantModel,
+  categoryModel,
+  subCategoryModel,
+  productModel,
 } = require("../models");
 const { statusCodes } = require("../statusCodes/");
 const { Messages } = require("../message/");
-const { sendResponse, sendErrorResponse } = require("../services/");
+const { sendResponse, sendErrorResponse, nodeMailer } = require("../services/");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const { constants } = require("../constants/");
@@ -95,7 +99,7 @@ exports.adminLogin = async (req, res) => {
   }
 };
 
-exports.blockUnblock = async (req, res) => {
+exports.blockUnblockUser = async (req, res) => {
   try {
     const isUpdated = await UserModel.findOneAndUpdate(
       { _id: req.body._id },
@@ -201,7 +205,7 @@ exports.UploadOne = async (req, res) => {
   }
 };
 
-exports.UploadMany = async (req, res) => {
+exports.UploadManyImages = async (req, res) => {
   try {
     const foundUser = await AdminModel.findOne({ _id: req.token._id });
     const imageArr = req.files.map((resp) => {
@@ -348,6 +352,238 @@ exports.findUserById = async (req, res) => {
       );
     const User = await UserModel.findOne({ _id: req.params._id }).lean().exec();
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, User);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.addMerchant = async (req, res) => {
+  try {
+    const newMerchant = new merchantModel({
+      email: req.body.email,
+      phone: req.body.phone,
+      firstname: req.body.firstname,
+      adminId: req.token._id,
+    });
+    const admin = AdminModel.findOne({ _id: req.token._id });
+    admin.merchantId.push(newMerchant._id);
+    await admin.save();
+    const password = `${req.body.firstname}${req.body.phone}`;
+    newMerchant.password = password;
+    const savedMerchant = await newMerchant.save();
+    await nodeMailer(Messages.ACCOUNT_CREDENTIAL, req.body.email, password);
+    sendResponse(
+      req,
+      res,
+      statusCodes.created,
+      Messages.SUCCESS,
+      savedMerchant
+    );
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.deleteMerchant = async (req, res) => {
+  try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+
+    const acknowledge = await merchantModel
+      .findOneAndUpdate({ _id: req.body.params }, { isDeleted: true })
+      .exec();
+    if (!acknowledge)
+      return sendErrorResponse(req, res, statusCodes.OK, Messages.userNotFound);
+    const categories = await categoryModel
+      .findOneAndUpdate({ merchantId: req.params._id }, { isDeleted: true })
+      .exec();
+    if (!categories)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_CATEGORY
+      );
+    const SubCategories = await subCategoryModel
+      .findOneAndUpdate({ merchantId: req.params._id }, { isDeleted: true })
+      .exec();
+    if (!SubCategories)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_SUB_CATEGORY
+      );
+    const products = await productModel
+      .findOneAndUpdate({ merchantId: req.params._id }, { isDeleted: true })
+      .exec();
+    if (!products)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    sendResponse(req, res, statusCodes.SUCCESS, Messages.SUCCESS);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.updateMerchantById = async (req, res) => {
+  try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+
+    const updatedMerchant = await merchantModel.findOneAndUpdate(
+      { _id: req.params._id },
+      req.body,
+      { new: true }
+    );
+    if (!updatedMerchant)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.MERCHANT_NOT_FOUND
+      );
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, updatedMerchant);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.getAllMerchants = async (req, res) => {
+  try {
+    const merchants = await merchantModel.find().lean().exec();
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchants);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.getMerchantById = async (req, res) => {
+  try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+    const merchants = await merchantModel
+      .find({ _id: req.params._id })
+      .lean()
+      .exec();
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchants);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.activeDeactivateMerchant = async (req, res) => {
+  try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+
+    const activateDeactivateMerchant = await merchantModel
+      .findOneAndUpdate(
+        { _id: req.params._id },
+        { isActive: req.body.activateDeactivate },
+        { new: true }
+      )
+      .exec()
+      .lean();
+    if (!activateDeactivateMerchant)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.userNotFound
+      );
+    const updatedCategory = await categoryModel
+      .findOneAndUpdate(
+        { merchantId: req.params._id },
+        { isActive: req.body.activateDeactivate },
+        { new: true }
+      )
+      .exec()
+      .lean();
+    if (!updatedCategory)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_CATEGORY
+      );
+    const updatedSubCategory = await subCategoryModel
+      .findOneAndUpdate(
+        { merchantId: req.params._id },
+        { isActive: req.body.activateDeactivate },
+        { new: true }
+      )
+      .exec()
+      .lean();
+    if (!updatedSubCategory)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_SUB_CATEGORY
+      );
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      req.body.activateDeactivate
+        ? Messages.activatedSuccessfully
+        : Messages.deactivatedSuccessfully
+    );
   } catch (err) {
     sendErrorResponse(
       req,

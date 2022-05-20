@@ -4,4 +4,7 @@ module.exports = {
   dummyModel: require("./dummy"),
   userAddressModel: require("./userAddress"),
   merchantModel: require("./merchant"),
+  productModel: require("./product"),
+  categoryModel: require("./category"),
+  subCategoryModel: require("./subcategoty"),
 };
