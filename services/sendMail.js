@@ -76,6 +76,9 @@ const mailerService = async (route, email,password = "") => {
                     <b>Thanks for creating a Food App account. Here are your Credentials regarding the same .</b> </p>
                     <br><div style="display:inline-block;background:#00b9ee; padding:10px;-webkit-border-radius: 10px; -moz-border-radius: 4px; border-radius: 4px;">
                       <h4>  
+                      email : ${email}
+                      </h4>
+                      <h4>  
                       password : ${password}
                       </h4>
                     <br><br>

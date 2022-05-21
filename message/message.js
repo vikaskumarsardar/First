@@ -51,11 +51,14 @@ module.exports = {
   RESEND_OTP: "Your resent OTP for Expandimo is",
   NO_DATA : "No data found",
   NO_SUB_CATEGORY : "No Subcategory found",
+  SUBCATEGORY_ALREADY_EXISTS :"Subcategory already exists",
   NO_CATEGORY : "No Category found",
+  CATEGORY_ALREADY_EXISTS : "category already exists",
   DEFAULT_BODY : "default body",
   NO_ADDRESS_FOUND : "NO ADDRESS FOUND",
   ACCOUNT_CREDENTIAL : "sendCredential",
   NO_PRODUCT_FOUND : "NO  PRODUCTS FOUND",
-  MERCHANT_NOT_FOUND : 'MERCHNAT NOT FOUND',
+  PRODUCT_ALREADY_EXISTS : "Product Already exists",
+  MERCHANT_NOT_FOUND : 'MERCHANT NOT FOUND',
   
 };

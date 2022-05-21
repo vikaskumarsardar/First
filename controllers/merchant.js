@@ -50,6 +50,17 @@ exports.merchantLogin = async (req, res) => {
 
 exports.addCategory = async (req, res) => {
   try {
+    const foundCategory = await categoryModel
+      .findOne({ name: req.body.name })
+      .lean()
+      .exec();
+    if (foundCategory)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.CATEGORY_ALREADY_EXISTS
+      );
     const newCategory = new categoryModel(req.body);
     newCategory.merchantId = req.token._id;
     const saved = await newCategory.save();
@@ -66,9 +77,16 @@ exports.addCategory = async (req, res) => {
 
 exports.deleteCategory = async (req, res) => {
   try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
     const acknowledged = await categoryModel
       .findOneAndUpdate(
-        { merchantId: req.token._id, isDeleted: false },
+        { _id: req.params._id, isDeleted: false },
         { isDeleted: true }
       )
       .exec();
@@ -80,8 +98,8 @@ exports.deleteCategory = async (req, res) => {
         Messages.NO_CATEGORY
       );
     const updateSubcategory = await subCategoryModel
-      .findOneAndUpdate(
-        { merchantId: req.token._id, isDeleted: false },
+      .updateMany(
+        { categoryId: acknowledged._id, isDeleted: false },
         { isDeleted: true }
       )
       .exec();
@@ -92,6 +110,21 @@ exports.deleteCategory = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
+    const deletedProduct = await productModel
+      .updateMany(
+        { subCategoryId: updateSubcategory._id, isDeleted: false },
+        { isDeleted: true }
+      )
+      .lean()
+      .exec();
+    if (!deletedProduct)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+
     sendResponse(req, res, statusCodes.SUCCESS, Messages.deletedSuccessFully);
   } catch (err) {
     sendErrorResponse(
@@ -105,11 +138,21 @@ exports.deleteCategory = async (req, res) => {
 
 exports.activeDeactiveCategory = async (req, res) => {
   try {
-    const acknowledged = await categoryModel.findOneAndUpdate(
-      { merchantId: req.token._id, isDeleted: false },
-      { isActive: req.body.activeDeactive },
-      { new: true }
-    );
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+    const acknowledged = await categoryModel
+      .findOneAndUpdate(
+        { _id: req.params._id, isDeleted: false },
+        { isActive: req.body.activeDeactive },
+        { new: true }
+      )
+      .lean()
+      .exec();
     if (!acknowledged)
       return sendErrorResponse(
         req,
@@ -118,8 +161,8 @@ exports.activeDeactiveCategory = async (req, res) => {
         Messages.NO_CATEGORY
       );
     const updateSubcategory = await subCategoryModel
-      .findOneAndUpdate(
-        { merchantId: req.token._id, isDeleted: false },
+      .updateMany(
+        { categoryId: acknowledged._id, isDeleted: false },
         { isActive: req.body.activeDeactive }
       )
       .exec();
@@ -131,8 +174,8 @@ exports.activeDeactiveCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     const activatedDeactivatedProduct = await productModel
-      .findOneAndUpdate(
-        { merchantId: req.token._id },
+      .updateMany(
+        { subCategoryId: updateSubcategory._id, isDeleted: false },
         { isActive: req.body.activeDeactive }
       )
       .lean()
@@ -164,8 +207,15 @@ exports.activeDeactiveCategory = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
+    if (!ObjectIsValid(req.body._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
     const acknowledged = await categoryModel.findOneAndUpdate(
-      { merchantId: req.token._id, isDeleted: false },
+      { _id: req.body._id, isDeleted: false },
       req.body,
       { new: true }
     );
@@ -190,7 +240,7 @@ exports.updateCategory = async (req, res) => {
 exports.getAllCategory = async (req, res) => {
   try {
     const categories = await categoryModel
-      .find({ isDeleted: false, isActive: true })
+      .find({ merchantId: req.token._id, isDeleted: false, isActive: true })
       .lean()
       .exec();
     if (categories.length == 0)
@@ -216,8 +266,16 @@ exports.getAllCategory = async (req, res) => {
 
 exports.getCategoryById = async (req, res) => {
   try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+
     const category = await categoryModel
-      .findOne({ merchantId: req.params._id, isDeleted: false, isActive: true })
+      .findOne({ _id: req.params._id, isDeleted: false, isActive: true })
       .lean()
       .exec();
     if (!category)
@@ -240,8 +298,15 @@ exports.getCategoryById = async (req, res) => {
 
 exports.blockUnblockCategory = async (req, res) => {
   try {
+    if (!ObjectIsValid(req.body._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
     const blockedUnblockedCategory = await categoryModel.findOneAndUpdate(
-      { merchantId: req.token._id, isDeleted: false },
+      { _id: req.body._id, isDeleted: false },
       { isBLocked: req.body.isBlocked },
       { new: true }
     );
@@ -253,8 +318,8 @@ exports.blockUnblockCategory = async (req, res) => {
         Messages.NO_CATEGORY
       );
     const updateSubcategory = await subCategoryModel
-      .findOneAndUpdate(
-        { merchantId: req.token._id, isDeleted: false },
+      .updateMany(
+        { categoryId: blockedUnblockedCategory._id, isDeleted: false },
         { isBlocked: req.body.isBlocked }
       )
       .exec()
@@ -267,8 +332,8 @@ exports.blockUnblockCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     const blockedUnblockedProduct = await productModel
-      .findOneAndUpdate(
-        { merchantId: req.token._id },
+      .updateMany(
+        { subCategoryId: updateSubcategory._id },
         { isActive: req.body.activeDeactive }
       )
       .lean()
@@ -301,6 +366,17 @@ exports.blockUnblockCategory = async (req, res) => {
 
 exports.addSubCategory = async (req, res) => {
   try {
+    const foundSubCategory = await subCategoryModel
+      .findOne({ name: req.body.name })
+      .lean()
+      .exec();
+    if (!foundSubCategory)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.SUBCATEGORY_ALREADY_EXISTS
+      );
     const newSubCategory = new subCategoryModel(req.body);
     newSubCategory.merchantId = req.token._id;
     newSubCategory.categoryId = req.body.categoryId;
@@ -318,13 +394,20 @@ exports.addSubCategory = async (req, res) => {
 
 exports.deleteSubCategory = async (req, res) => {
   try {
-    const acknowledged = await subCategoryModel
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+    const deletedSubCategory = await subCategoryModel
       .findOneAndUpdate(
-        { merchantId: req.token._id, isDeleted: false },
+        { _id: req.params._id, isDeleted: false },
         { isDeleted: true }
       )
       .exec();
-    if (!acknowledged)
+    if (!deletedSubCategory)
       return sendErrorResponse(
         req,
         res,
@@ -332,7 +415,10 @@ exports.deleteSubCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     const deletedProduct = await productModel
-      .findOneAndUpdate({ merchantId: req.token._id }, { isDeleted: true })
+      .updateMany(
+        { subCategoryId: deletedSubCategory._id, isDeleted: false },
+        { isDeleted: true }
+      )
       .lean()
       .exec();
     if (!deletedProduct)
@@ -355,8 +441,15 @@ exports.deleteSubCategory = async (req, res) => {
 
 exports.activeDeactiveSubCategory = async (req, res) => {
   try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
     const acknowledged = await subCategoryModel.findOneAndUpdate(
-      { merchantId: req.token._id, isDeleted: false },
+      { _id: req.params._id, isDeleted: false },
       { isActive: req.body.activeDeactive },
       { new: true }
     );
@@ -368,8 +461,8 @@ exports.activeDeactiveSubCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     const activateDeactivateProduct = await productModel
-      .findOneAndUpdate(
-        { merchantId: req.token._id },
+      .updateMany(
+        { subCategoryId: acknowledged._id },
         { isActive: req.body.activeDeactive }
       )
       .lean()
@@ -402,8 +495,15 @@ exports.activeDeactiveSubCategory = async (req, res) => {
 
 exports.updateSubCategory = async (req, res) => {
   try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
     const acknowledged = await categoryModel.findOneAndUpdate(
-      { merchantId: req.token._id, isDeleted: false },
+      { _id: req.params._id, isDeleted: false },
       req.body,
       { new: true }
     );
@@ -427,8 +527,15 @@ exports.updateSubCategory = async (req, res) => {
 
 exports.getAllSubCategory = async (req, res) => {
   try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
     const subCategories = await subCategoryModel
-      .find({ isDeleted: false, isActive: true })
+      .find({ categoryId: req.params._id, isDeleted: false, isActive: true })
       .lean()
       .exec();
     if (subCategories.length == 0)
@@ -454,18 +561,25 @@ exports.getAllSubCategory = async (req, res) => {
 
 exports.getSubCategoryById = async (req, res) => {
   try {
-    const subCategory = await subCategoryModel
-      .findOne({ merchantId: req.params._id, isDeleted: false, isActive: true })
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+    const foundSubCategory = await subCategoryModel
+      .findOne({ _id: req.params._id, isDeleted: false, isActive: true })
       .lean()
       .exec();
-    if (!subCategory)
+    if (!foundSubCategory)
       return sendErrorResponse(
         req,
         res,
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
-    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, subCategory);
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, foundSubCategory);
   } catch (err) {
     sendErrorResponse(
       req,
@@ -478,11 +592,20 @@ exports.getSubCategoryById = async (req, res) => {
 
 exports.blockUnblockSubCategory = async (req, res) => {
   try {
-    const blockedUnblockedSubCategory = await subCategoryModel.findOneAndUpdate(
-      { merchantId: req.token._id, isDeleted: false },
-      { isBLocked: req.body.isBlocked },
-      { new: true }
-    );
+    if (!ObjectIsValid(req.body._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+    const blockedUnblockedSubCategory = await subCategoryModel
+      .findOneAndUpdate(
+        { _id: req.body._id, isDeleted: false },
+        { isBLocked: req.body.isBlocked },
+        { new: true }
+      )
+      .exec();
     if (!blockedUnblockedSubCategory)
       return sendErrorResponse(
         req,
@@ -491,8 +614,8 @@ exports.blockUnblockSubCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     const blockedUnblockedProduct = await productModel
-      .findOneAndUpdate(
-        { merchantId: req.token._id },
+      .updateMany(
+        { subCategoryId: blockedUnblockedSubCategory._id },
         { isBLocked: req.body.isBlocked }
       )
       .lean()
@@ -524,6 +647,14 @@ exports.blockUnblockSubCategory = async (req, res) => {
 
 exports.addProduct = async (req, res) => {
   try {
+    const foundProduct = await productModel.findOne({ name: req.body.name });
+    if (foundProduct)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.PRODUCT_ALREADY_EXISTS
+      );
     const newProduct = new productModel(req.body);
     newProduct.merchantId = req.token._id;
     newProduct.subCategoryId = req.body.subCategoryId;
@@ -552,7 +683,7 @@ exports.deleteProductById = async (req, res) => {
 
     const deletedProduct = await productModel
       .findOneAndUpdate(
-        { _id: req.params._id },
+        { _id: req.params._id ,isDeleted : false},
         { isDeleted: true },
         { new: true }
       )
@@ -586,7 +717,7 @@ exports.updateProductById = async (req, res) => {
         Messages.BAD_REQUEST
       );
     const updatedProduct = await productModel
-      .findOneAndUpdate({ merchantId: req.params._id }, req.body, { new: true })
+      .findOneAndUpdate({ _id: req.params._id ,isDeleted : false}, req.body, { new: true })
       .lean()
       .exec();
     if (!updatedProduct)
@@ -609,7 +740,7 @@ exports.updateProductById = async (req, res) => {
 
 exports.uploadMerchantImage = async (req, res) => {
   try {
-    const foundUser = await merchantModel.findOne({ _id: req.token._id });
+    const foundUser = await merchantModel.findOne({ _id: req.token._id ,isDeleted : false});
     const files = `${constants.path.merchant}${req.file.path.split("\\")[2]}`;
     foundUser.image.push(files);
     const saved = await foundUser.save();

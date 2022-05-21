@@ -369,6 +369,7 @@ exports.addMerchant = async (req, res) => {
       phone: req.body.phone,
       firstname: req.body.firstname,
       adminId: req.token._id,
+      countryCode : req.body.countryCode
     });
     const admin = AdminModel.findOne({ _id: req.token._id });
     admin.merchantId.push(newMerchant._id);
@@ -405,12 +406,12 @@ exports.deleteMerchant = async (req, res) => {
       );
 
     const acknowledge = await merchantModel
-      .findOneAndUpdate({ _id: req.body.params }, { isDeleted: true })
+      .findOneAndUpdate({ _id: req.params._id,isDeleted : false }, { isDeleted: true })
       .exec();
     if (!acknowledge)
       return sendErrorResponse(req, res, statusCodes.OK, Messages.userNotFound);
     const categories = await categoryModel
-      .findOneAndUpdate({ merchantId: req.params._id }, { isDeleted: true })
+      .updateMany({ merchantId: req.params._id,isDeleted : false }, { isDeleted: true })
       .exec();
     if (!categories)
       return sendErrorResponse(
@@ -420,7 +421,7 @@ exports.deleteMerchant = async (req, res) => {
         Messages.NO_CATEGORY
       );
     const SubCategories = await subCategoryModel
-      .findOneAndUpdate({ merchantId: req.params._id }, { isDeleted: true })
+      .updateMany({ merchantId: req.params._id,isDeleted : false }, { isDeleted: true })
       .exec();
     if (!SubCategories)
       return sendErrorResponse(
@@ -430,7 +431,7 @@ exports.deleteMerchant = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     const products = await productModel
-      .findOneAndUpdate({ merchantId: req.params._id }, { isDeleted: true })
+      .updateMany({ merchantId: req.params._id,isDeleted : false }, { isDeleted: true })
       .exec();
     if (!products)
       return sendErrorResponse(
@@ -485,7 +486,7 @@ exports.updateMerchantById = async (req, res) => {
 
 exports.getAllMerchants = async (req, res) => {
   try {
-    const merchants = await merchantModel.find().lean().exec();
+    const merchants = await merchantModel.find({}).lean().exec();
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchants);
   } catch (err) {
     sendErrorResponse(
@@ -506,11 +507,12 @@ exports.getMerchantById = async (req, res) => {
         statusCodes.badRequest,
         Messages.BAD_REQUEST
       );
-    const merchants = await merchantModel
-      .find({ _id: req.params._id })
+    const merchant = await merchantModel
+      .findOne({ _id: req.params._id })
       .lean()
       .exec();
-    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchants);
+      if(!merchant) return sendErrorResponse(req,res,statusCodes.badRequest,Messages.MERCHANT_NOT_FOUND)
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchant);
   } catch (err) {
     sendErrorResponse(
       req,
@@ -533,7 +535,7 @@ exports.activeDeactivateMerchant = async (req, res) => {
 
     const activateDeactivateMerchant = await merchantModel
       .findOneAndUpdate(
-        { _id: req.params._id },
+        { _id: req.params._id,isDeleted : false },
         { isActive: req.body.activateDeactivate },
         { new: true }
       )
@@ -544,11 +546,11 @@ exports.activeDeactivateMerchant = async (req, res) => {
         req,
         res,
         statusCodes.badRequest,
-        Messages.userNotFound
+        Messages.MERCHANT_NOT_FOUND
       );
     const updatedCategory = await categoryModel
-      .findOneAndUpdate(
-        { merchantId: req.params._id },
+      .updateMany(
+        { merchantId: req.params._id ,isDeleted : false},
         { isActive: req.body.activateDeactivate },
         { new: true }
       )
@@ -562,8 +564,8 @@ exports.activeDeactivateMerchant = async (req, res) => {
         Messages.NO_CATEGORY
       );
     const updatedSubCategory = await subCategoryModel
-      .findOneAndUpdate(
-        { merchantId: req.params._id },
+      .updateMany(
+        { merchantId: req.params._id ,isDeleted : false},
         { isActive: req.body.activateDeactivate },
         { new: true }
       )
@@ -576,6 +578,9 @@ exports.activeDeactivateMerchant = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
+
+      const updatedProduct = await productModel.updateMany({merchantId : req.params._id,isDeleted : false},{isActive : req.body.activateDeactivate })
+      if(!updatedProduct) return sendErrorResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
     sendResponse(
       req,
       res,
