@@ -8,35 +8,42 @@ const {
   subCategoryModel,
   productModel,
 } = require("../models/");
-const { generateJWTTOken } = require("../lib/");
+const { generateJWTTOken, ObjectIsValid } = require("../lib/");
 
 exports.merchantLogin = async (req, res) => {
   try {
-    const user = await merchantModel.findOne({ _id: req.body.email }).exec();
+    const merchant = await merchantModel
+      .findOne({ email: req.body.email })
+      .exec();
 
-    if (!user)
+    if (!merchant)
       return sendErrorResponse(
         req,
         res,
         statusCodes.badRequest,
-        Messages.BAD_REQUEST
+        Messages.userNotFound
       );
-    if (!user.isValid(req.body.password))
+    if (!merchant.isValid(req.body.password))
       return sendResponse(
         req,
         res,
         statusCodes.badRequest,
-        Messages.BAD_REQUEST
+        Messages.passwordIncorrect
       );
+    const accessToken = await generateJWTTOken({
+      _id: merchant._id,
+      isMerchant: true,
+    });
+    merchant.accessToken = accessToken;
 
-    user.isActive = true;
-    await user.save();
+    merchant.isActive = true;
+    await merchant.save();
     sendResponse(
       req,
       res,
       statusCodes.OK,
-      `${Messages.welcome}${user.username}`,
-      user
+      `${Messages.welcome}${merchant.firstname}`,
+      merchant
     );
   } catch (err) {
     sendErrorResponse(
@@ -51,7 +58,7 @@ exports.merchantLogin = async (req, res) => {
 exports.addCategory = async (req, res) => {
   try {
     const foundCategory = await categoryModel
-      .findOne({ name: req.body.name })
+      .findOne({ name: req.body.name, merchantId: req.token._id })
       .lean()
       .exec();
     if (foundCategory)
@@ -82,7 +89,7 @@ exports.deleteCategory = async (req, res) => {
         req,
         res,
         statusCodes.badRequest,
-        Messages.BAD_REQUEST
+        Messages.objectIdInvalid
       );
     const acknowledged = await categoryModel
       .findOneAndUpdate(
@@ -103,16 +110,21 @@ exports.deleteCategory = async (req, res) => {
         { isDeleted: true }
       )
       .exec();
-    if (!updateSubcategory)
+
+    if (updateSubcategory.modifiedCount === 0)
       return sendErrorResponse(
         req,
         res,
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
+
+    let subCategories = await subCategoryModel
+      .distinct("_id", { categoryId: acknowledged._id, isDeleted: true })
+      .exec();
     const deletedProduct = await productModel
       .updateMany(
-        { subCategoryId: updateSubcategory._id, isDeleted: false },
+        { subCategoryId: { $in: subCategories } },
         { isDeleted: true }
       )
       .lean()
@@ -125,7 +137,71 @@ exports.deleteCategory = async (req, res) => {
         Messages.NO_PRODUCT_FOUND
       );
 
-    sendResponse(req, res, statusCodes.SUCCESS, Messages.deletedSuccessFully);
+    sendResponse(req, res, statusCodes.OK, Messages.deletedSuccessFully);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+exports.recoverDeletedCategory = async (req, res) => {
+  try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.objectIdInvalid
+      );
+    const acknowledged = await categoryModel
+      .findOneAndUpdate(
+        { _id: req.params._id, isDeleted: true },
+        { isDeleted: false }
+      )
+      .exec();
+    if (!acknowledged)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_CATEGORY
+      );
+    const updateSubcategory = await subCategoryModel
+      .updateMany(
+        { categoryId: acknowledged._id, isDeleted: true },
+        { isDeleted: false }
+      )
+      .exec();
+    if (updateSubcategory.modifiedCount === 0)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_SUB_CATEGORY
+      );
+
+    let subCategoryIds = await subCategoryModel
+      .distinct("_id", { categoryId: acknowledged._id })
+      .exec();
+    const deletedProduct = await productModel
+      .updateMany(
+        { subCategoryId: { $in: subCategoryIds }, isDeleted: true },
+        { isDeleted: false }
+      )
+      .lean()
+      .exec();
+    if (!deletedProduct)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESFULLY_RECOVERED);
   } catch (err) {
     sendErrorResponse(
       req,
@@ -173,9 +249,13 @@ exports.activeDeactiveCategory = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
+
+    let subCategories = await subCategoryModel
+      .distinct("_id", { categoryId: acknowledged._id, isDeleted: false })
+      .exec();
     const activatedDeactivatedProduct = await productModel
       .updateMany(
-        { subCategoryId: updateSubcategory._id, isDeleted: false },
+        { subCategoryId: { $in: subCategories }, isDeleted: false },
         { isActive: req.body.activeDeactive }
       )
       .lean()
@@ -207,7 +287,7 @@ exports.activeDeactiveCategory = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    if (!ObjectIsValid(req.body._id))
+    if (!ObjectIsValid(req.params._id))
       return sendErrorResponse(
         req,
         res,
@@ -215,10 +295,11 @@ exports.updateCategory = async (req, res) => {
         Messages.BAD_REQUEST
       );
     const acknowledged = await categoryModel.findOneAndUpdate(
-      { _id: req.body._id, isDeleted: false },
+      { _id: req.params._id, isDeleted: false },
       req.body,
       { new: true }
     );
+
     if (!acknowledged)
       return sendErrorResponse(
         req,
@@ -307,7 +388,7 @@ exports.blockUnblockCategory = async (req, res) => {
       );
     const blockedUnblockedCategory = await categoryModel.findOneAndUpdate(
       { _id: req.body._id, isDeleted: false },
-      { isBLocked: req.body.isBlocked },
+      { isBlocked: req.body.isBlocked },
       { new: true }
     );
     if (!blockedUnblockedCategory)
@@ -331,10 +412,17 @@ exports.blockUnblockCategory = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
+    let subCategories = await subCategoryModel
+      .distinct("_id", {
+        categoryId: blockedUnblockedCategory._id,
+        isDeleted: false,
+      })
+      .exec();
+
     const blockedUnblockedProduct = await productModel
       .updateMany(
-        { subCategoryId: updateSubcategory._id },
-        { isActive: req.body.activeDeactive }
+        { subCategoryId: { $in: subCategories } },
+        { isBlocked: req.body.isBlocked }
       )
       .lean()
       .exec();
@@ -367,10 +455,10 @@ exports.blockUnblockCategory = async (req, res) => {
 exports.addSubCategory = async (req, res) => {
   try {
     const foundSubCategory = await subCategoryModel
-      .findOne({ name: req.body.name })
+      .findOne({ name: req.body.name, categoryId: req.body.categoryId })
       .lean()
       .exec();
-    if (!foundSubCategory)
+    if (foundSubCategory)
       return sendErrorResponse(
         req,
         res,
@@ -380,7 +468,7 @@ exports.addSubCategory = async (req, res) => {
     const newSubCategory = new subCategoryModel(req.body);
     newSubCategory.merchantId = req.token._id;
     newSubCategory.categoryId = req.body.categoryId;
-    const saved = await newCategory.save();
+    const saved = await newSubCategory.save();
     sendResponse(req, res, statusCodes.created, Messages.SUCCESS, saved);
   } catch (err) {
     sendErrorResponse(
@@ -532,13 +620,14 @@ exports.getAllSubCategory = async (req, res) => {
         req,
         res,
         statusCodes.badRequest,
-        Messages.BAD_REQUEST
+        Messages.objectIdInvalid
       );
     const subCategories = await subCategoryModel
       .find({ categoryId: req.params._id, isDeleted: false, isActive: true })
       .lean()
       .exec();
-    if (subCategories.length == 0)
+
+    if (subCategories.length === 0)
       return sendErrorResponse(
         req,
         res,
@@ -546,7 +635,7 @@ exports.getAllSubCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
-      subCategoriesCount: categories.length,
+      subCategoriesCount: subCategories.length,
       subCategories,
     });
   } catch (err) {
@@ -602,7 +691,7 @@ exports.blockUnblockSubCategory = async (req, res) => {
     const blockedUnblockedSubCategory = await subCategoryModel
       .findOneAndUpdate(
         { _id: req.body._id, isDeleted: false },
-        { isBLocked: req.body.isBlocked },
+        { isBlocked: req.body.isBlocked },
         { new: true }
       )
       .exec();
@@ -616,7 +705,7 @@ exports.blockUnblockSubCategory = async (req, res) => {
     const blockedUnblockedProduct = await productModel
       .updateMany(
         { subCategoryId: blockedUnblockedSubCategory._id },
-        { isBLocked: req.body.isBlocked }
+        { isBlocked: req.body.isBlocked }
       )
       .lean()
       .exec();
@@ -647,7 +736,11 @@ exports.blockUnblockSubCategory = async (req, res) => {
 
 exports.addProduct = async (req, res) => {
   try {
-    const foundProduct = await productModel.findOne({ name: req.body.name });
+    const foundProduct = await productModel.findOne({
+      productName: req.body.productName,
+      subCategoryId: req.body.subCategoryId,
+      categoryId: req.body.categoryId,
+    });
     if (foundProduct)
       return sendErrorResponse(
         req,
@@ -683,7 +776,7 @@ exports.deleteProductById = async (req, res) => {
 
     const deletedProduct = await productModel
       .findOneAndUpdate(
-        { _id: req.params._id ,isDeleted : false},
+        { _id: req.params._id, isDeleted: false },
         { isDeleted: true },
         { new: true }
       )
@@ -696,7 +789,7 @@ exports.deleteProductById = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_PRODUCT_FOUND
       );
-    sendResponse(req, res, statusCodes.created, Messages.SUCCESS, saved);
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS);
   } catch (err) {
     sendErrorResponse(
       req,
@@ -717,7 +810,9 @@ exports.updateProductById = async (req, res) => {
         Messages.BAD_REQUEST
       );
     const updatedProduct = await productModel
-      .findOneAndUpdate({ _id: req.params._id ,isDeleted : false}, req.body, { new: true })
+      .findOneAndUpdate({ _id: req.params._id, isDeleted: false }, req.body, {
+        new: true,
+      })
       .lean()
       .exec();
     if (!updatedProduct)
@@ -738,9 +833,140 @@ exports.updateProductById = async (req, res) => {
   }
 };
 
+exports.getAllProducts = async (req, res) => {
+  try {
+    const allProduts = await productModel.find(
+      {
+        merchantId: req.token._id,
+        isDeleted: false,
+      }
+      // {
+      //   isDeleted : 0,
+      //   isActive : 0,
+      //   isBlocked : 0
+      // }
+    );
+    if (allProduts.length == 0)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
+      itemCount: allProduts.length,
+      products: allProduts,
+    });
+  } catch (err) {
+    sendErrorResponse(
+      res,
+      res,
+      statusCodes.internalServerError,
+      Messages.incorrectEmailString
+    );
+  }
+};
+exports.getProductById = async (req, res) => {
+  try {
+    const productFound = await productModel.find(
+      {
+        _id: req.params._id,
+        isDeleted: false,
+      }
+      // {
+      //   isDeleted : 0,
+      //   isActive : 0,
+      //   isBlocked : 0
+      // }
+    );
+    if (!productFound)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, productFound);
+  } catch (err) {
+    sendErrorResponse(
+      res,
+      res,
+      statusCodes.internalServerError,
+      Messages.incorrectEmailString
+    );
+  }
+};
+
+exports.activeDeactiveProduct = async (req, res) => {
+  try {
+    if (!ObjectIsValid(req.params._id))
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.BAD_REQUEST
+      );
+    const activeDeactiveProduct = await productModel
+      .findOneAndUpdate(
+        { _id: req.params._id, isDeleted: false },
+        { isActive: req.body.activeDeactive },
+        { new: true }
+      )
+      .lean()
+      .exec();
+    if (!activeDeactiveProduct)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      Messages.SUCCESS,
+      activeDeactiveProduct
+    );
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.getProductsBySCID = async (req, res) => {
+  try {
+    const foundProducts = await productModel
+      .find({ subCategoryId: req.params._id })
+      .exec();
+    if (foundProducts.length === 0)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, foundProducts);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
 exports.uploadMerchantImage = async (req, res) => {
   try {
-    const foundUser = await merchantModel.findOne({ _id: req.token._id ,isDeleted : false});
+    const foundUser = await merchantModel.findOne({
+      _id: req.token._id,
+      isDeleted: false,
+    });
     const files = `${constants.path.merchant}${req.file.path.split("\\")[2]}`;
     foundUser.image.push(files);
     const saved = await foundUser.save();

@@ -6,5 +6,5 @@ module.exports = {
   merchantModel: require("./merchant"),
   productModel: require("./product"),
   categoryModel: require("./category"),
-  subCategoryModel: require("./subcategoty"),
+  subCategoryModel: require("./subcategory"),
 };

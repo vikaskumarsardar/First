@@ -3,6 +3,7 @@ const subCategorySchema = new mongoose.Schema(
   {
     name: String,
     image: String,
+    description : String,
     isActive: {
       type: Boolean,
       default: true,
@@ -11,11 +12,12 @@ const subCategorySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    isBLocked: {
+    isBlocked: {
       type: Boolean,
       default: false,
     },
-    discount: { discountType: String, discount: Number },
+    discountType: String,
+    discount: Number,
 
     merchantId: {
       type: mongoose.Types.ObjectId,
@@ -28,6 +30,8 @@ const subCategorySchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    // toJSON: true,
+    // toObject: true,
   }
 );
 

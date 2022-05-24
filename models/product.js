@@ -9,7 +9,20 @@ const productSchema = new mongoose.Schema(
     ratings: Number,
     image: String,
     description: String,
-    discount: { discountType: String, discount: Number },
+    discountType: String,
+    discount: Number,
+    isDeleted : {
+      type : Boolean,
+      default : false
+    },
+    isActive : {
+      type : Boolean,
+      default : true
+    },
+    isBlocked : {
+      type : Boolean,
+      default : false
+    },
     categoryId: {
       type: mongoose.Types.ObjectId,
       ref: "Category",

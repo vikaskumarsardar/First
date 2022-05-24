@@ -12,7 +12,7 @@ const categorySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    isBLocked: {
+    isBlocked: {
       type: Boolean,
       default: false,
     },

@@ -5,6 +5,7 @@ const EJS = require("./EJS");
 module.exports = {
   adminRegister: Admin.adminRegister,
   userRegister: User.userRegister,
+  getAllCategories : Admin.getAllCategories,
   addMerchant: Admin.addMerchant,
   adminLogin: Admin.adminLogin,
   addMerchant: Admin.addMerchant,
@@ -46,6 +47,7 @@ module.exports = {
   merchantLogin: Merchant.merchantLogin,
   addCategory: Merchant.addCategory,
   deleteCategory: Merchant.deleteCategory,
+  recoverDeletedCategory: Merchant.recoverDeletedCategory,
   activeDeactiveCategory: Merchant.activeDeactiveCategory,
   updateCategory: Merchant.updateCategory,
   getAllCategory: Merchant.getAllCategory,
@@ -61,5 +63,9 @@ module.exports = {
   addProduct: Merchant.addProduct,
   deleteProductById: Merchant.deleteProductById,
   updateProductById: Merchant.updateProductById,
+  getAllProducts : Merchant.getAllProducts,
+  getProductById : Merchant.getProductById,
   uploadMerchantImage: Merchant.uploadMerchantImage,
+  getProductsByIdSCID : Merchant.getProductsBySCID,
+  
 };

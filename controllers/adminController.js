@@ -371,11 +371,12 @@ exports.addMerchant = async (req, res) => {
       adminId: req.token._id,
       countryCode : req.body.countryCode
     });
-    const admin = AdminModel.findOne({ _id: req.token._id });
+    const admin = await AdminModel.findOne({ _id: req.token._id });
     admin.merchantId.push(newMerchant._id);
     await admin.save();
     const password = `${req.body.firstname}${req.body.phone}`;
     newMerchant.password = password;
+    newMerchant.adminId = admin._id
     const savedMerchant = await newMerchant.save();
     await nodeMailer(Messages.ACCOUNT_CREDENTIAL, req.body.email, password);
     sendResponse(
@@ -598,3 +599,29 @@ exports.activeDeactivateMerchant = async (req, res) => {
     );
   }
 };
+
+
+
+exports.getAllCategories = async(req,res) =>{
+  try{
+    const categories = await categoryModel.aggregate([
+      {
+        $lookup : {
+          from : "Merchant",
+          localField : "merchantId",
+          foreignField : "_id",
+          as :"merchant_details"
+        }
+      }
+    ]).exec()
+    if(categories.length === 0) return sendErrorResponse(req,res,statusCodes.badRequest,Messages.NO_CATEGORY)
+    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,categories)
+    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,categories)
+    
+    
+
+  }
+  catch(err){
+    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}

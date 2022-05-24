@@ -48,4 +48,8 @@ Router.get('/getAllMerchants',VerifyAdmin,Admin.getAllMerchants)
 Router.get('/getMerchantById/:_id',VerifyAdmin,Admin.getMerchantById)
 Router.post('/activeDeactivateMerchant',VerifyAdmin,Admin.activeDeactivateMerchant)
 
+
+// CATEGOTY ROUTES
+Router.get('/getAllCategories',VerifyAdmin,Admin.getAllCategories)
+
 module.exports = Router;

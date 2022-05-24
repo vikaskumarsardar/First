@@ -10,3 +10,9 @@
 
 // const result = password.match(/[a-z]/g)
 // console.log(result)
+
+
+const obj = {
+                firstName :"swapan",
+                lastName : "kumar"
+}
