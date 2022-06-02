@@ -890,7 +890,7 @@ exports.getNearbyMerchants = async (req, res) => {
 
 exports.getAllProductsFromAllMerchants = async(req,res) =>{
   try{
-    const foundProducts = await productModel.find().lean().exec()
+    const foundProducts = await productModel.find({},{isActive : 0,isDeleted : 0,isBlocked : 0,createdAt : 0,updatedAt : 0,__v : 0}).lean().exec()
     if(!foundProducts) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
     sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,foundProducts)
   }

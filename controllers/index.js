@@ -75,4 +75,7 @@ module.exports = {
   getNearbyMerchants : User.getNearbyMerchants,
   addAddOns : Merchant.addAddOns,
   getAllProductsFromAllMerchants : User.getAllProductsFromAllMerchants,
+  home : async(req,res) =>{
+    res.send("hello")
+  }
 };
