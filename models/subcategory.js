@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 const subCategorySchema = new mongoose.Schema(
   {
-    name: String,
-    image: String,
-    description : String,
+    name: {type:String,default:""},
+    image: {type:String,default:""},
+    description : {type:String,default:""},
     isActive: {
       type: Boolean,
       default: true,
@@ -16,8 +16,8 @@ const subCategorySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    discountType: String,
-    discount: Number,
+    discountType: {type:String,default:""},
+    discount: {type:Number,default: 0},
 
     merchantId: {
       type: mongoose.Types.ObjectId,

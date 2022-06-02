@@ -7,13 +7,25 @@ const {
   categoryModel,
   subCategoryModel,
   productModel,
+  chargesModel,
+  addOnsModel,
 } = require("../models/");
 const { generateJWTTOken, ObjectIsValid } = require("../lib/");
 
 exports.merchantLogin = async (req, res) => {
   try {
     const merchant = await merchantModel
-      .findOne({ email: req.body.email })
+      .findOne(
+        { email: req.body.email },
+        {
+          isDeleted: 0,
+          isActive: 0,
+          isBLocked: 0,
+          isMerchant: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        }
+      )
       .exec();
 
     if (!merchant)
@@ -32,7 +44,6 @@ exports.merchantLogin = async (req, res) => {
       );
     const accessToken = await generateJWTTOken({
       _id: merchant._id,
-      isMerchant: true,
     });
     merchant.accessToken = accessToken;
 
@@ -70,6 +81,9 @@ exports.addCategory = async (req, res) => {
       );
     const newCategory = new categoryModel(req.body);
     newCategory.merchantId = req.token._id;
+    const path = req?.file?.path || "\\\\"
+    const files = `${constants.path.category}${path.split("\\")[2]}`;
+    newCategory.image = files;
     const saved = await newCategory.save();
     sendResponse(req, res, statusCodes.created, Messages.SUCCESS, saved);
   } catch (err) {
@@ -118,15 +132,8 @@ exports.deleteCategory = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
-
-    let subCategories = await subCategoryModel
-      .distinct("_id", { categoryId: acknowledged._id, isDeleted: true })
-      .exec();
     const deletedProduct = await productModel
-      .updateMany(
-        { subCategoryId: { $in: subCategories } },
-        { isDeleted: true }
-      )
+      .updateMany({ categoryId: acknowledged._id }, { isDeleted: true })
       .lean()
       .exec();
     if (!deletedProduct)
@@ -183,12 +190,9 @@ exports.recoverDeletedCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
 
-    let subCategoryIds = await subCategoryModel
-      .distinct("_id", { categoryId: acknowledged._id })
-      .exec();
     const deletedProduct = await productModel
       .updateMany(
-        { subCategoryId: { $in: subCategoryIds }, isDeleted: true },
+        { categoryId: acknowledged._id, isDeleted: true },
         { isDeleted: false }
       )
       .lean()
@@ -250,12 +254,9 @@ exports.activeDeactiveCategory = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
 
-    let subCategories = await subCategoryModel
-      .distinct("_id", { categoryId: acknowledged._id, isDeleted: false })
-      .exec();
     const activatedDeactivatedProduct = await productModel
       .updateMany(
-        { subCategoryId: { $in: subCategories }, isDeleted: false },
+        { categoryId: acknowledged._id, isDeleted: false },
         { isActive: req.body.activeDeactive }
       )
       .lean()
@@ -297,7 +298,17 @@ exports.updateCategory = async (req, res) => {
     const acknowledged = await categoryModel.findOneAndUpdate(
       { _id: req.params._id, isDeleted: false },
       req.body,
-      { new: true }
+      {
+        new: true,
+        projection: {
+          isActive: 0,
+          isBLocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      }
     );
 
     if (!acknowledged)
@@ -320,8 +331,19 @@ exports.updateCategory = async (req, res) => {
 
 exports.getAllCategory = async (req, res) => {
   try {
+    let id = req.token?._id || req.params._id;
     const categories = await categoryModel
-      .find({ merchantId: req.token._id, isDeleted: false, isActive: true })
+      .find(
+        { merchantId: id, isDeleted: false, isActive: true },
+        {
+          isActive: 0,
+          isBLocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        }
+      )
       .lean()
       .exec();
     if (categories.length == 0)
@@ -336,6 +358,7 @@ exports.getAllCategory = async (req, res) => {
       categories,
     });
   } catch (err) {
+    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -356,7 +379,17 @@ exports.getCategoryById = async (req, res) => {
       );
 
     const category = await categoryModel
-      .findOne({ _id: req.params._id, isDeleted: false, isActive: true })
+      .findOne(
+        { _id: req.params._id, isDeleted: false, isActive: true },
+        {
+          isActive: 0,
+          isBLocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        }
+      )
       .lean()
       .exec();
     if (!category)
@@ -412,16 +445,9 @@ exports.blockUnblockCategory = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_SUB_CATEGORY
       );
-    let subCategories = await subCategoryModel
-      .distinct("_id", {
-        categoryId: blockedUnblockedCategory._id,
-        isDeleted: false,
-      })
-      .exec();
-
     const blockedUnblockedProduct = await productModel
       .updateMany(
-        { subCategoryId: { $in: subCategories } },
+        { categoryId: blockedUnblockedCategory._id },
         { isBlocked: req.body.isBlocked }
       )
       .lean()
@@ -466,6 +492,9 @@ exports.addSubCategory = async (req, res) => {
         Messages.SUBCATEGORY_ALREADY_EXISTS
       );
     const newSubCategory = new subCategoryModel(req.body);
+    const path = req?.file?.path || "\\"
+    const files = path.split("\\")[2] ? `${constants.path.subCategory}${path.split("\\")[2]}` : "";
+    newSubCategory.image = files;
     newSubCategory.merchantId = req.token._id;
     newSubCategory.categoryId = req.body.categoryId;
     const saved = await newSubCategory.save();
@@ -516,7 +545,7 @@ exports.deleteSubCategory = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_PRODUCT_FOUND
       );
-    sendResponse(req, res, statusCodes.SUCCESS, Messages.deletedSuccessFully);
+    sendResponse(req, res, statusCodes.OK, Messages.deletedSuccessFully);
   } catch (err) {
     sendErrorResponse(
       req,
@@ -593,7 +622,17 @@ exports.updateSubCategory = async (req, res) => {
     const acknowledged = await categoryModel.findOneAndUpdate(
       { _id: req.params._id, isDeleted: false },
       req.body,
-      { new: true }
+      {
+        new: true,
+        projection: {
+          isActive: 0,
+          isBlocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      }
     );
     if (!acknowledged)
       return sendErrorResponse(
@@ -623,7 +662,17 @@ exports.getAllSubCategory = async (req, res) => {
         Messages.objectIdInvalid
       );
     const subCategories = await subCategoryModel
-      .find({ categoryId: req.params._id, isDeleted: false, isActive: true })
+      .find(
+        { categoryId: req.params._id, isDeleted: false, isActive: true },
+        {
+          isActive: 0,
+          isBlocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        }
+      )
       .lean()
       .exec();
 
@@ -658,7 +707,19 @@ exports.getSubCategoryById = async (req, res) => {
         Messages.BAD_REQUEST
       );
     const foundSubCategory = await subCategoryModel
-      .findOne({ _id: req.params._id, isDeleted: false, isActive: true })
+      .findOne(
+        { _id: req.params._id, isDeleted: false, isActive: true },
+        {
+          isActive: 0,
+          isBlocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          merchantId: 0,
+          categoryId: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        }
+      )
       .lean()
       .exec();
     if (!foundSubCategory)
@@ -749,12 +810,16 @@ exports.addProduct = async (req, res) => {
         Messages.PRODUCT_ALREADY_EXISTS
       );
     const newProduct = new productModel(req.body);
+    const path = req?.file?.path || "\\"
+    const files = path.split("\\")[2] ? `${constants.path.product}${path.split("\\")[2]}` : "";
+    newProduct.image = files
     newProduct.merchantId = req.token._id;
     newProduct.subCategoryId = req.body.subCategoryId;
     newProduct.categoryId = req.body.categoryId;
     const saved = await newProduct.save();
     sendResponse(req, res, statusCodes.created, Messages.SUCCESS, saved);
   } catch (err) {
+    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -812,6 +877,17 @@ exports.updateProductById = async (req, res) => {
     const updatedProduct = await productModel
       .findOneAndUpdate({ _id: req.params._id, isDeleted: false }, req.body, {
         new: true,
+        projection: {
+          isActive: 0,
+          isBlocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          merchantId: 0,
+          categoryId: 0,
+          subCategoryId: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        },
       })
       .lean()
       .exec();
@@ -835,34 +911,41 @@ exports.updateProductById = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const allProduts = await productModel.find(
-      {
-        merchantId: req.token._id,
-        isDeleted: false,
-      }
-      // {
-      //   isDeleted : 0,
-      //   isActive : 0,
-      //   isBlocked : 0
-      // }
-    );
-    if (allProduts.length == 0)
-      return sendErrorResponse(
-        req,
-        res,
-        statusCodes.badRequest,
-        Messages.NO_PRODUCT_FOUND
-      );
-    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
-      itemCount: allProduts.length,
+    const limit = parseInt(req.body.limit) || 10;
+    const skip = Math.max(0, parseInt(req.body.page) - 1) * limit;
+    const query = {
+      // merchantId: req.token._id,
+      isDeleted: false,
+      isActive: true,
+    };
+    const itemCount = await productModel.countDocuments(query);
+    const pageCount = Math.ceil(itemCount / limit);
+    const allProduts = await productModel
+      .find(query, {
+        isActive: 0,
+        isBlocked: 0,
+        isDeleted: 0,
+        __v: 0,
+        createdAt: 0,
+        updatedAt: 0,
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+      .exec();
+    const message =
+      allProduts.length === 0 ? Messages.NO_PRODUCT_FOUND : Messages.SUCCESS;
+    sendResponse(req, res, statusCodes.OK, message, {
       products: allProduts,
+      pageCount,
+      itemCount,
     });
   } catch (err) {
     sendErrorResponse(
       res,
       res,
       statusCodes.internalServerError,
-      Messages.incorrectEmailString
+      Messages.internalServerError
     );
   }
 };
@@ -872,12 +955,15 @@ exports.getProductById = async (req, res) => {
       {
         _id: req.params._id,
         isDeleted: false,
+      },
+      {
+        isActive: 0,
+        isBlocked: 0,
+        isDeleted: 0,
+        __v: 0,
+        createdAt: 0,
+        updatedAt: 0,
       }
-      // {
-      //   isDeleted : 0,
-      //   isActive : 0,
-      //   isBlocked : 0
-      // }
     );
     if (!productFound)
       return sendErrorResponse(
@@ -910,7 +996,17 @@ exports.activeDeactiveProduct = async (req, res) => {
       .findOneAndUpdate(
         { _id: req.params._id, isDeleted: false },
         { isActive: req.body.activeDeactive },
-        { new: true }
+        {
+          new: true,
+          projection: {
+            isActive: 0,
+            isBlocked: 0,
+            isDeleted: 0,
+            __v: 0,
+            createdAt: 0,
+            updatedAt: 0,
+          },
+        }
       )
       .lean()
       .exec();
@@ -941,7 +1037,17 @@ exports.activeDeactiveProduct = async (req, res) => {
 exports.getProductsBySCID = async (req, res) => {
   try {
     const foundProducts = await productModel
-      .find({ subCategoryId: req.params._id })
+      .find(
+        { subCategoryId: req.params._id, isDeleted: false },
+        {
+          isActive: 0,
+          isBlocked: 0,
+          isDeleted: 0,
+          __v: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        }
+      )
       .exec();
     if (foundProducts.length === 0)
       return sendErrorResponse(
@@ -967,8 +1073,9 @@ exports.uploadMerchantImage = async (req, res) => {
       _id: req.token._id,
       isDeleted: false,
     });
-    const files = `${constants.path.merchant}${req.file.path.split("\\")[2]}`;
-    foundUser.image.push(files);
+    const path = req.file.path || "\\"
+    const files = path.split("\\")[2] ? `${constants.path.merchant}${path.split("\\")[2]}` : "";
+    foundUser.image = files;
     const saved = await foundUser.save();
     sendResponse(
       req,
@@ -986,3 +1093,74 @@ exports.uploadMerchantImage = async (req, res) => {
     );
   }
 };
+
+exports.addCharges = async (req, res) => {
+  try {
+    const foundMerchantCharges = await chargesModel
+      .findOne({
+        merchantId: req.token._id,
+      })
+      .lean()
+      .exec();
+    if (foundMerchantCharges)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.CHARGES_ALREADY_EXISTS
+      );
+    const newCharges = new chargesModel(req.body);
+    newCharges.merchantId = req.token._id;
+    newCharges.total =
+      newCharges.tax +
+      newCharges.deliveryCharges +
+      newCharges.serviceCharges +
+      newCharges.GST;
+    const savedCharges = await newCharges.save();
+    sendResponse(req, res, statusCodes.created, Messages.SUCCESS, savedCharges);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.updateCharges = async (req, res) => {
+  try {
+    const updatedCharges = await chargesModel
+      .findOneAndUpdate({ merchantId: req.token._id }, req.body)
+      .lean()
+      .exec();
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, updatedCharges);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+
+exports.addAddOns = async(req,res) =>{
+  try{
+    const foundAddOns = await addOnsModel.findOne({merchantId : req.token._id,item : req.body.item}).lean().exec()
+    if(foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.ADDONS_ALREADY_EXISTS)
+    const newAddOns = new addOnsModel(req.body)
+    newAddOns.merchantId = req.token._id
+    const path = req.file?.path || "\\"
+    console.log(path);
+    const files = path.split("\\")[2] ? `${constants.path.addOns}${path.split("\\")[2]}` : "";
+    newAddOns.image = files;
+    const savedAddOn = await newAddOns.save()
+    sendResponse(req,res,statusCodes.created,Messages.SUCCESS,savedAddOn)
+  }
+  catch(err){
+    console.log(err)
+    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}

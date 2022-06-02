@@ -11,8 +11,21 @@
 // const result = password.match(/[a-z]/g)
 // console.log(result)
 
+// const obj = {
+//                 firstName :"swapan",
+//                 lastName : "kumar"
+// }
 
-const obj = {
-                firstName :"swapan",
-                lastName : "kumar"
-}
+// 
+// if(true){
+//                 console.log("iffififififi")
+//                 console.log("iffififififi")
+//                 console.log("iffififififi")
+//                 console.log("if condition")
+// }
+// else{
+//                 console.log("else");
+// }
+// let data = undefined
+// data = !data ? {} : {[data] : true}
+// console.log(data);

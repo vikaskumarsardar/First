@@ -67,5 +67,12 @@ module.exports = {
   getProductById : Merchant.getProductById,
   uploadMerchantImage: Merchant.uploadMerchantImage,
   getProductsByIdSCID : Merchant.getProductsBySCID,
-  
+  addToCart : User.addToCart,
+  addCharges : Merchant.addCharges,
+  updateCharges : Merchant.updateCharges,
+  removeItemsFromCart : User.removeItemsFromCart,
+  getAllCart : User.getAllCart,
+  getNearbyMerchants : User.getNearbyMerchants,
+  addAddOns : Merchant.addAddOns,
+  getAllProductsFromAllMerchants : User.getAllProductsFromAllMerchants,
 };

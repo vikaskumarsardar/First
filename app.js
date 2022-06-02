@@ -16,6 +16,26 @@ module.exports = (app) => {
     constants.path.admin,
     express.static(path.join(__dirname, constants.path.adminUploads))
   );
+  app.use(
+    constants.path.merchant,
+    express.static(path.join(__dirname, constants.path.merchantUploads))
+  );
+  app.use(
+    constants.path.category,
+    express.static(path.join(__dirname, constants.path.categoryUploads))
+  );
+  app.use(
+    constants.path.subCategory,
+    express.static(path.join(__dirname, constants.path.subCategoryUploads))
+  );
+  app.use(
+    constants.path.product,
+    express.static(path.join(__dirname, constants.path.productUploads))
+  );
+  app.use(
+    constants.path.addOns,
+    express.static(path.join(__dirname, constants.path.addOnsUploads))
+  );
   require("./config/").connection;
   app.use("/api", require("./routes"));
 };

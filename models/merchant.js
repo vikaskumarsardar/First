@@ -1,18 +1,33 @@
 const mongoose = require("mongoose");
 const merchantSchema = new mongoose.Schema(
   {
-    name: String,
-    phone: Number,
-    countryCode: String,
-    username: String,
-    firstname: String,
-    email: String,
-    image: String,
-    encryptedPassword: String,
-    salt: String,
-    accessToken: String,
-    expireTokenIn: Number,
-    resetToken: String,
+    name: { type: String, default: "" },
+    phone: { type: Number, default: 0 },
+    countryCode: { type: String, default: "" },
+    username: { type: String, default: "" },
+    location: {
+      type : {
+        type : String,
+        default : "Point"
+      },
+      coordinates :{
+        type : Array,
+        default : [{type : Number,default : 0}]
+      } 
+    },
+    
+    firstname: { type: String, default: "" },
+    email: { type: String, default: "" },
+    image: { type: String, default: "" },
+    encryptedPassword: { type: String, default: "" },
+    salt: { type: String, default: "" },
+    accessToken: { type: String, default: "" },
+    expireTokenIn: { type: Number, default: 0 },
+    resetToken: { type: String, default: "" },
+    isMerchant : {
+      type : Boolean,
+      default : true
+    },
     adminId: {
       type: mongoose.Types.ObjectId,
       ref: "Admin",

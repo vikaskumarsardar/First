@@ -7,4 +7,8 @@ module.exports = {
   productModel: require("./product"),
   categoryModel: require("./category"),
   subCategoryModel: require("./subcategory"),
+  cartModel : require('./cart'),
+  orderModel : require('./orders'),
+  chargesModel : require('./charges'),
+  addOnsModel  : require('./addons')
 };

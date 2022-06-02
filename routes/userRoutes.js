@@ -1,8 +1,8 @@
 const express = require("express");
 const Router = express.Router();
 const User = require("../controllers");
-const Multer = require("../services/");
-const { VerifyUser } = require("../middlewares/");
+const {uploadImage} = require("../services/");
+const { VerifyUser, VerifyMerchant } = require("../middlewares/");
 
 Router.post("/register", User.userRegister);
 Router.post("/login", User.userLogin);
@@ -10,22 +10,21 @@ Router.post("/activateDeactivate", VerifyUser, User.activateDeactivate);
 Router.post(
   "/uploadOne",
   VerifyUser,
-  Multer.UploadUserSingle,
+  uploadImage('users','single'),
   User.UploadUserImage
 );
 Router.post(
   "/uploadMany",
   VerifyUser,
-  Multer.UploadUserMany,
+  uploadImage('users','many'),
   User.UploadMultipleUserImage
 );
 Router.post(
   "/uploadFields",
   VerifyUser,
-  Multer.UploadUserFields,
+  uploadImage('users','uploadFields'),
   User.UploadUserFields
 );
-
 
 // USER ROUTES
 Router.get("/verifyUser/:user", User.VerifyUser);
@@ -39,11 +38,24 @@ Router.post("/resendOTP", User.resendOTPForUser);
 Router.post("/addAddress", VerifyUser, User.addUserAddress);
 Router.get("/getAddressById/:_id", VerifyUser, User.getUserAddressById);
 Router.put("/updateAddress", VerifyUser, User.updateUserAddress);
-Router.post("/updateUserProfile", VerifyUser, User.updateUserProfile);
+Router.post("/updateUserProfile", VerifyUser,uploadImage('users','single'),User.updateUserProfile);
 Router.delete("/deleteAddress", VerifyUser, User.deleteUserAddress);
-
 
 // DUMMY ROUTES
 Router.get("/getAllDummyData", VerifyUser, User.getAllDummyData);
+Router.get("/getAllCategory/:_id", User.getAllCategory);
+Router.get("/getAllProducts",VerifyUser,User.getAllProductsFromAllMerchants)
 
+// CART ROUTES
+Router.post("/addToCart/:_id", VerifyUser, User.addToCart);
+Router.delete(
+  "/removeItemsFromCart/:_id",
+  VerifyUser,
+  User.removeItemsFromCart
+);
+Router.get("/getAllCarts", VerifyUser, User.getAllCart);
+
+// ORDER ROUTES
+Router.get("/getAllMerchants", User.getAllMerchants);
+Router.get("/getNearbyMerchants", VerifyUser, User.getNearbyMerchants);
 module.exports = Router;

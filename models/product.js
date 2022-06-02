@@ -1,16 +1,15 @@
 const mongoose = require("mongoose");
 const productSchema = new mongoose.Schema(
   {
-    productName: String,
-    brand: String,
-    price: Number,
-    oldPrice: String,
-    quantity: Number,
-    ratings: Number,
-    image: String,
-    description: String,
-    discountType: String,
-    discount: Number,
+    productName: {type:String,default:""},
+    brand: {type:String,default:""},
+    price: {type:Number,default: 0},
+    oldPrice: {type:String,default:""},
+    image : {type:String,default:""},
+    ratings: {type:Number,default: 0},
+    description: {type:String,default:""},
+    discountType: {type:String,default:""},
+    discount: {type:Number,default: 0},
     isDeleted : {
       type : Boolean,
       default : false
@@ -23,6 +22,7 @@ const productSchema = new mongoose.Schema(
       type : Boolean,
       default : false
     },
+    deliveryCharges : {type:Number,default: 0},
     categoryId: {
       type: mongoose.Types.ObjectId,
       ref: "Category",

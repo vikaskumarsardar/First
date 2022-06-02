@@ -31,7 +31,6 @@ exports.adminRegister = async (req, res) => {
     const accesstoken = await generateJWTTOken({
       _id: newUser._id,
       username: newUser.username,
-      isAdmin: newUser.isAdmin,
     });
     newUser.accessToken = accesstoken;
     const savedUser = await newUser.save();
@@ -75,8 +74,6 @@ exports.adminLogin = async (req, res) => {
 
     const accesstoken = await generateJWTTOken({
       _id: doesUserExist._id,
-      username: doesUserExist.username,
-      isAdmin: doesUserExist.isAdmin,
     });
 
     doesUserExist.accessToken = accesstoken;
@@ -185,7 +182,8 @@ exports.activateDeactivateUser = async (req, res) => {
 exports.UploadOne = async (req, res) => {
   try {
     const foundUser = await AdminModel.findOne({ _id: req.token._id });
-    const files = `${constants.path.admin}${req.file.path.split("\\")[2]}`;
+    const path = req.file?.path || "\\"
+    const files = req.file.path.split("\\")[2] ? `${constants.path.admin}${req.file.path.split("\\")[2]}` : "";
     foundUser.image.push(files);
     const saved = await foundUser.save();
     sendResponse(
@@ -209,7 +207,8 @@ exports.UploadManyImages = async (req, res) => {
   try {
     const foundUser = await AdminModel.findOne({ _id: req.token._id });
     const imageArr = req.files.map((resp) => {
-      return `${constants.path.admin}${resp.path.split("\\")[2]}`;
+      const path = resp?.path || "\\"
+      return path.split("\\")[2] ? `${constants.path.admin}${path.split("\\")[2]}` : "";
     });
 
     foundUser.image = [...foundUser.image, ...imageArr];
@@ -253,19 +252,9 @@ exports.UploadFields = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     let { pageNo, limit, search, sort, filterKey } = req.query;
-    filterKey =
-      filterKey === "isPhoneVerified"
-        ? { isPhoneVerified: true }
-        : filterKey === "isEmailVerified"
-        ? { isEmailVerified: true }
-        : filterKey === "isBlocked"
-        ? { isBlocked: true }
-        : filterKey === "isActive"
-        ? { isActive: true }
-        : filterKey === "isDeleted"
-        ? { isDeleted: true }
-        : {};
-
+    
+    filterKey = !filterKey ? {} : {[filterKey] : true}
+    console.log(filterKey);
     search = search || "";
     sort = sort || 1;
     limit = limit || constants.limit;
@@ -364,19 +353,31 @@ exports.findUserById = async (req, res) => {
 
 exports.addMerchant = async (req, res) => {
   try {
+    const foundMerchant = await merchantModel.findOne({
+      $or: [{ username: req.body.username }, { email: req.body.email }],
+    });
+    if (foundMerchant)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.MERCHANT_ALREADY_EXISTS
+      );
     const newMerchant = new merchantModel({
       email: req.body.email,
       phone: req.body.phone,
       firstname: req.body.firstname,
       adminId: req.token._id,
-      countryCode : req.body.countryCode
+      countryCode: req.body.countryCode,
+      location: req.body.location,
+      username: req.body.username,
     });
     const admin = await AdminModel.findOne({ _id: req.token._id });
     admin.merchantId.push(newMerchant._id);
     await admin.save();
     const password = `${req.body.firstname}${req.body.phone}`;
     newMerchant.password = password;
-    newMerchant.adminId = admin._id
+    newMerchant.adminId = admin._id;
     const savedMerchant = await newMerchant.save();
     await nodeMailer(Messages.ACCOUNT_CREDENTIAL, req.body.email, password);
     sendResponse(
@@ -387,6 +388,7 @@ exports.addMerchant = async (req, res) => {
       savedMerchant
     );
   } catch (err) {
+    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -407,12 +409,18 @@ exports.deleteMerchant = async (req, res) => {
       );
 
     const acknowledge = await merchantModel
-      .findOneAndUpdate({ _id: req.params._id,isDeleted : false }, { isDeleted: true })
+      .findOneAndUpdate(
+        { _id: req.params._id, isDeleted: false },
+        { isDeleted: true }
+      )
       .exec();
     if (!acknowledge)
       return sendErrorResponse(req, res, statusCodes.OK, Messages.userNotFound);
     const categories = await categoryModel
-      .updateMany({ merchantId: req.params._id,isDeleted : false }, { isDeleted: true })
+      .updateMany(
+        { merchantId: req.params._id, isDeleted: false },
+        { isDeleted: true }
+      )
       .exec();
     if (!categories)
       return sendErrorResponse(
@@ -422,7 +430,10 @@ exports.deleteMerchant = async (req, res) => {
         Messages.NO_CATEGORY
       );
     const SubCategories = await subCategoryModel
-      .updateMany({ merchantId: req.params._id,isDeleted : false }, { isDeleted: true })
+      .updateMany(
+        { merchantId: req.params._id, isDeleted: false },
+        { isDeleted: true }
+      )
       .exec();
     if (!SubCategories)
       return sendErrorResponse(
@@ -432,7 +443,10 @@ exports.deleteMerchant = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
     const products = await productModel
-      .updateMany({ merchantId: req.params._id,isDeleted : false }, { isDeleted: true })
+      .updateMany(
+        { merchantId: req.params._id, isDeleted: false },
+        { isDeleted: true }
+      )
       .exec();
     if (!products)
       return sendErrorResponse(
@@ -487,9 +501,14 @@ exports.updateMerchantById = async (req, res) => {
 
 exports.getAllMerchants = async (req, res) => {
   try {
-    const merchants = await merchantModel.find({}).lean().exec();
+    const merchants = await merchantModel
+      .find({ adminId: req.token._id })
+      .lean()
+      .exec();
+    console.log(req.token._id);
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchants);
   } catch (err) {
+    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -512,7 +531,13 @@ exports.getMerchantById = async (req, res) => {
       .findOne({ _id: req.params._id })
       .lean()
       .exec();
-      if(!merchant) return sendErrorResponse(req,res,statusCodes.badRequest,Messages.MERCHANT_NOT_FOUND)
+    if (!merchant)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.MERCHANT_NOT_FOUND
+      );
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchant);
   } catch (err) {
     sendErrorResponse(
@@ -536,7 +561,7 @@ exports.activeDeactivateMerchant = async (req, res) => {
 
     const activateDeactivateMerchant = await merchantModel
       .findOneAndUpdate(
-        { _id: req.params._id,isDeleted : false },
+        { _id: req.params._id, isDeleted: false },
         { isActive: req.body.activateDeactivate },
         { new: true }
       )
@@ -551,7 +576,7 @@ exports.activeDeactivateMerchant = async (req, res) => {
       );
     const updatedCategory = await categoryModel
       .updateMany(
-        { merchantId: req.params._id ,isDeleted : false},
+        { merchantId: req.params._id, isDeleted: false },
         { isActive: req.body.activateDeactivate },
         { new: true }
       )
@@ -566,7 +591,7 @@ exports.activeDeactivateMerchant = async (req, res) => {
       );
     const updatedSubCategory = await subCategoryModel
       .updateMany(
-        { merchantId: req.params._id ,isDeleted : false},
+        { merchantId: req.params._id, isDeleted: false },
         { isActive: req.body.activateDeactivate },
         { new: true }
       )
@@ -580,8 +605,17 @@ exports.activeDeactivateMerchant = async (req, res) => {
         Messages.NO_SUB_CATEGORY
       );
 
-      const updatedProduct = await productModel.updateMany({merchantId : req.params._id,isDeleted : false},{isActive : req.body.activateDeactivate })
-      if(!updatedProduct) return sendErrorResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
+    const updatedProduct = await productModel.updateMany(
+      { merchantId: req.params._id, isDeleted: false },
+      { isActive: req.body.activateDeactivate }
+    );
+    if (!updatedProduct)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
     sendResponse(
       req,
       res,
@@ -600,28 +634,35 @@ exports.activeDeactivateMerchant = async (req, res) => {
   }
 };
 
-
-
-exports.getAllCategories = async(req,res) =>{
-  try{
-    const categories = await categoryModel.aggregate([
-      {
-        $lookup : {
-          from : "Merchant",
-          localField : "merchantId",
-          foreignField : "_id",
-          as :"merchant_details"
-        }
-      }
-    ]).exec()
-    if(categories.length === 0) return sendErrorResponse(req,res,statusCodes.badRequest,Messages.NO_CATEGORY)
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,categories)
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,categories)
-    
-    
-
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await categoryModel
+      .aggregate([
+        {
+          $lookup: {
+            from: "merchants",
+            localField: "merchantId",
+            foreignField: "_id",
+            as: "merchant_details",
+          },
+        },
+        { $unwind: "$merchant_details" },
+      ])
+      .exec();
+    if (categories.length === 0)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_CATEGORY
+      );
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, categories);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
-  catch(err){
-    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
-  }
-}
+};

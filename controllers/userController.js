@@ -1,13 +1,23 @@
-const { UserModel, AdminModel, userAddressModel,dummyModel } = require("../models");
+const {
+  UserModel,
+  AdminModel,
+  userAddressModel,
+  dummyModel,
+  cartModel,
+  productModel,
+  chargesModel,
+  merchantModel,
+  addOnsModel,
+} = require("../models");
 const jwt = require("jsonwebtoken");
-const { twilio, nodeMailer} = require("../services/");
+const { twilio, nodeMailer } = require("../services/");
 const { Messages } = require("../message/");
 const { statusCodes } = require("../statusCodes/");
 const { sendResponse, sendErrorResponse } = require("../services/");
-const {constants} = require("../constants/");
+const { constants } = require("../constants/");
 const { ObjectIsValid, generateJWTTOken } = require("../lib");
 
-exports.userRegister = async (req, res, next) => {
+exports.userRegister = async (req, res) => {
   try {
     const doesExist = await UserModel.findOne({
       $or: [
@@ -37,6 +47,11 @@ exports.userRegister = async (req, res, next) => {
       newUser.verifyMethod = Messages.email;
     }
 
+    const path = req?.file?.path || "\\";
+    const file = path.split("\\")[2]
+      ? `${constants.path.user}${path.split("\\")[2]}`
+      : "";
+    newUser.image.push(file);
     const savedUser = await newUser.save();
     sendResponse(
       req,
@@ -127,10 +142,25 @@ exports.userLogin = async (req, res) => {
 };
 exports.updateProfile = async (req, res) => {
   try {
+    const path = req.file?.path || "\\";
+    const file = path.split("\\")[2]
+      ? `${constants.path.user}${path.split("\\")[2]}`
+      : "";
+    req.body.image = [file];
     const updateProfile = await UserModel.findOneAndUpdate(
       { _id: req.token._id },
       req.body,
-      { new: true }
+      {
+        new: true,
+        projection: {
+          isActive: 0,
+          isDeleted: 0,
+          isBlocked: 0,
+          createdAt: 0,
+          updatedAt: 0,
+          __v: 0,
+        },
+      }
     )
       .lean()
       .exec();
@@ -173,7 +203,10 @@ exports.activateDeactivate = async (req, res) => {
 exports.UploadUserImage = async (req, res) => {
   try {
     const foundUser = await UserModel.findOne({ _id: req.token._id });
-    const files = `${constants.path.user}${req.file.path.split("\\")[2]}`;
+    const path = req.file?.path || "\\";
+    const files = path.split("\\")[2]
+      ? `${constants.path.user}${path.split("\\")[2]}`
+      : "";
     foundUser.image.push(files);
     const saved = await foundUser.save();
     sendResponse(
@@ -554,7 +587,6 @@ exports.getAddressById = async (req, res) => {
       );
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, address);
   } catch (err) {
-    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -573,7 +605,12 @@ exports.updateAddress = async (req, res) => {
       .lean()
       .exec();
     if (!address)
-      return sendResponse(req, res, statusCodes.badRequest, Messages.NO_ADDRESS_FOUND);
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_ADDRESS_FOUND
+      );
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, address);
   } catch (err) {
     sendErrorResponse(
@@ -611,13 +648,263 @@ exports.deleteAddress = async (req, res) => {
     );
   }
 };
+exports.addToCart = async (req, res) => {
+  try {
+    const productFound = await productModel
+      .findOne({ _id: req.body.productId })
+      .lean()
+      .exec();
+    if (!productFound)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    const addOnsFound = await addOnsModel
+      .findOne({ _id: { $in: req.body.addOnId } })
+      .lean()
+      .exec();
+    let addOnsTotal;
+    const addOnsArr = addOnsFound.map((result) => {
+      addOnsTotal += result.price;
+      return {
+        _id: result._id,
+        item: result.item,
+        price: result.price,
+      };
+    });
+    if (addOnsFound.length === 0)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_ADDONS_FOUND
+      );
+    const itemPresentInCart = await cartModel
+      .findOne({ userId: req.token._id })
+      .exec();
+
+    const cartItems = itemPresentInCart ?? new cartModel();
+    const quantity = Math.max(parseInt(req.body.quantity), 1) || 1;
+    cartItems.items =
+      cartItems.items.findIndex((resp) => resp._id == req.params._id) > -1
+        ? cartItems.items.map((resp) => {
+            if (resp._id == req.params._id) {
+              return {
+                ...resp,
+                subTotal: (resp.price + addOnsTotal) * (resp.quantity + 1),
+                addOns: addOnsArr,
+                quantity: resp.quantity + 1,
+              };
+            }
+            return resp;
+          })
+        : [
+            ...cartItems.items,
+            {
+              _id: productFound._id,
+              price: productFound.price,
+              quantity: quantity,
+              addOns: addOnsArr,
+              subTotal: (productFound.price + addOnsTotal) * quantity,
+            },
+          ];
+    const totalCharges = await chargesModel
+      .findOne({
+        merchantId: productFound.merchantId,
+      })
+      .lean()
+      .exec();
+
+    cartItems.total =
+      cartItems.items.reduce((a, b) => a + b.subTotal, 0) + totalCharges.total;
+    cartItems.userId = req.token._id;
+    cartItems.chargeId = totalCharges._id;
+    const savedCart = await cartItems.save();
+
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, savedCart);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.removeItemsFromCart = async (req, res) => {
+  try {
+    const productFound = await productModel
+      .findOne({ _id: req.params._id })
+      .lean()
+      .exec();
+    const itemInCart = await cartModel
+      .findOne({ userId: req.token._id })
+      .exec();
+    if (!itemInCart)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_CART_FOUND
+      );
+    const index = itemInCart.items.findIndex(
+      (items) => items._id == req.params._id
+    );
+
+    if (index > -1) {
+      itemInCart.items[index].quantity == 1
+        ? itemInCart.items.splice(index, 1)
+        : (itemInCart.items[index] = {
+            ...itemInCart.items[index],
+            subTotal: itemInCart.items[index].subTotal - productFound.price,
+            quantity: itemInCart.items[index].quantity - 1,
+          });
+      itemInCart.total -= productFound.price;
+    } else
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.ITEM_NOT_FOUND_IN_CART
+      );
+    const removedItemFromCart = await itemInCart.save();
+    sendResponse(
+      req,
+      res,
+      statusCodes.OK,
+      Messages.SUCCESS,
+      removedItemFromCart
+    );
+  } catch (err) {
+    sendResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.getAllCart = async (req, res) => {
+  try {
+    const foundCartItems = await cartModel
+      .findOne({ userId: req.token._id }, { items: 1, _id: 0, total: 1 })
+      .lean()
+      .exec();
+    if (!foundCartItems)
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_CART_FOUND
+      );
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
+      results: foundCartItems,
+    });
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+exports.DummyData = async (req, res) => {
+  try {
+    const itemCounts = await dummyModel.countDocuments().lean().exec();
+    const dummyDatas = await dummyModel.find().lean().exec();
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
+      results: dummyDatas,
+      itemCounts,
+    });
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
+
+exports.getNearbyMerchants = async (req, res) => {
+  try {
+    let { location, limit, pageNo } = req.body;
+    limit = limit || 10;
+    skip = Math.max(parseInt(pageNo || 1) - 1, 0) * limit;
+
+    const query = { isBLocked: false, isActive: true, isDeleted: false };
+    query.location = {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: location,
+        },
+        $minDistance: 0,
+        $maxDistance: 1000,
+      },
+    };
+    const nearbyMerchants = await merchantModel
+      .find(query, {
+        isBLocked: 0,
+        isActive: 0,
+        isDeleted: 0,
+        createdAt: 0,
+        updatedAt: 0,
+        __v: 0,
+      })
+      .limit(limit)
+      .skip(skip)
+      .lean()
+      .exec();
+    if (!nearbyMerchants)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.MERCHANT_NOT_FOUND
+      );
+
+    const itemCount = nearbyMerchants.length;
+    const pageCount = Math.ceil(itemCount / limit);
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
+      nearbyMerchants,
+      pageCount,
+      itemCount,
+    });
+  } catch (err) {
+    console.log(err);
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
 
 
-exports.DummyData = async(req,res) =>{
+exports.getAllProductsFromAllMerchants = async(req,res) =>{
   try{
-    const itemCounts = await dummyModel.countDocuments().lean().exec()
-    const dummyDatas = await dummyModel.find().lean().exec()
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{results : dummyDatas,itemCounts})
+    const foundProducts = await productModel.find().lean().exec()
+    if(!foundProducts) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
+    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,foundProducts)
+  }
+  catch(err){
+    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}
+
+exports.getProductById = async(req,res) =>{
+  try{
+    const foundProducts = await productModel.find({_id : req.params._id}).lean().exec()
+    if(!foundProducts) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
+    const foundAddOns = await addOnsModel.find({merchantId : foundProducts.merchantId}).lean().exec()
+    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{products : foundProducts,addOns : foundAddOns})
   }
   catch(err){
     sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
