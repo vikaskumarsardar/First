@@ -51,7 +51,7 @@ exports.userRegister = async (req, res) => {
     const file = path.split("\\")[2]
       ? `${constants.path.user}${path.split("\\")[2]}`
       : "";
-    newUser.image.push(file);
+    newUser.image = file;
     const savedUser = await newUser.save();
     sendResponse(
       req,
@@ -146,7 +146,7 @@ exports.updateProfile = async (req, res) => {
     const file = path.split("\\")[2]
       ? `${constants.path.user}${path.split("\\")[2]}`
       : "";
-    req.body.image = [file];
+    req.body.image = file;
     const updateProfile = await UserModel.findOneAndUpdate(
       { _id: req.token._id },
       req.body,
@@ -207,7 +207,7 @@ exports.UploadUserImage = async (req, res) => {
     const files = path.split("\\")[2]
       ? `${constants.path.user}${path.split("\\")[2]}`
       : "";
-    foundUser.image.push(files);
+    foundUser.image = files;
     const saved = await foundUser.save();
     sendResponse(
       req,

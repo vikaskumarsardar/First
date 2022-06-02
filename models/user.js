@@ -31,7 +31,10 @@ const userSchema = new mongoose.Schema(
     accessToken: {
       type: String,
     },
-    image: [],
+    image: {
+      type : String,
+      default : ""
+    },
     phone: String,
     countryCode: String,
     isPhoneVerified: {
