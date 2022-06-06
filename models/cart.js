@@ -3,6 +3,10 @@ const cartSchema = new mongoose.Schema(
   {
     total: { type: Number, default: 0 },
     items: [{ type: Object, default: {} }],
+    addOns : [{
+      type : Object,
+      default : {}
+    }],
     chargeId: {
       type: mongoose.Types.ObjectId,
       ref: "Charges",

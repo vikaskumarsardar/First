@@ -83,47 +83,48 @@ exports.userLogin = async (req, res) => {
         },
       ],
     });
+    
     if (!doesExist || doesExist.isDeleted) {
       return sendErrorResponse(
         req,
         res,
         statusCodes.badRequest,
         Messages.userNotFound
-      );
-    }
-    if (!doesExist.isValid(req.body.password)) {
-      return sendErrorResponse(
-        req,
-        res,
-        statusCodes.badRequest,
-        Messages.passwordIncorrect
-      );
-    }
-    if (
-      (doesExist.verifyMethod == Messages.email &&
-        !doesExist.isEmailVerified) ||
-      (doesExist.verifyMethod == Messages.phone && !doesExist.isPhoneVerified)
-    ) {
-      return sendErrorResponse(
-        req,
-        res,
-        statusCodes.badRequest,
-        Messages.accountNotVerified
-      );
-    }
-
-    if (doesExist.isBlocked) {
-      return sendErrorResponse(
-        req,
-        res,
-        statusCodes.UnauthorizedAccess,
-        Messages.blockedByAdmin
-      );
-    }
-    const accesstoken = await generateJWTTOken({ _id: doesExist._id });
-
-    doesExist.accessToken = accesstoken;
-    const savedUser = await doesExist.save();
+        );
+      }
+      if (!doesExist.isValid(req.body.password)) {
+        return sendErrorResponse(
+          req,
+          res,
+          statusCodes.badRequest,
+          Messages.passwordIncorrect
+          );
+        }
+        if (
+          (doesExist.verifyMethod == Messages.email &&
+            !doesExist.isEmailVerified) ||
+            (doesExist.verifyMethod == Messages.phone && !doesExist.isPhoneVerified)
+            ) {
+              return sendErrorResponse(
+                req,
+                res,
+                statusCodes.badRequest,
+                Messages.accountNotVerified
+                );
+              }
+              
+              if (doesExist.isBlocked) {
+                return sendErrorResponse(
+                  req,
+                  res,
+                  statusCodes.UnauthorizedAccess,
+                  Messages.blockedByAdmin
+                  );
+                }
+                const accesstoken = await generateJWTTOken({ _id: doesExist._id });
+                
+                doesExist.accessToken = accesstoken;
+                const savedUser = await doesExist.save();
     sendResponse(
       req,
       res,
@@ -132,6 +133,7 @@ exports.userLogin = async (req, res) => {
       savedUser
     );
   } catch (err) {
+    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -662,7 +664,7 @@ exports.addToCart = async (req, res) => {
         Messages.NO_PRODUCT_FOUND
       );
     const addOnsFound = await addOnsModel
-      .findOne({ _id: { $in: req.body.addOnId } })
+      .find({ _id: { $in: req.body.addOnId } })
       .lean()
       .exec();
     let addOnsTotal;
@@ -750,19 +752,26 @@ exports.removeItemsFromCart = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_CART_FOUND
       );
-    const index = itemInCart.items.findIndex(
-      (items) => items._id == req.params._id
-    );
 
+      
+      const index = itemInCart.items.findIndex(
+        (items) => items._id == req.params._id
+        );
+        
+        const totalAddOns = itemInCart.addOns.reduce((a,b)=>{
+          return a + b 
+        },0)
+    
+    
     if (index > -1) {
       itemInCart.items[index].quantity == 1
         ? itemInCart.items.splice(index, 1)
         : (itemInCart.items[index] = {
             ...itemInCart.items[index],
-            subTotal: itemInCart.items[index].subTotal - productFound.price,
+            subTotal: itemInCart.items[index].subTotal - (productFound.price + totalAddOns),
             quantity: itemInCart.items[index].quantity - 1,
           });
-      itemInCart.total -= productFound.price;
+      itemInCart.total -= (productFound.price + totalAddOns);
     } else
       return sendResponse(
         req,
@@ -801,6 +810,7 @@ exports.getAllCart = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_CART_FOUND
       );
+      console.log(foundCartItems);
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
       results: foundCartItems,
     });
@@ -903,13 +913,14 @@ exports.getProductById = async(req,res) =>{
   try{
     const foundProducts = await productModel.find({_id : req.params._id}).lean().exec()
     if(!foundProducts) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{products : foundProducts})
+    const foundAddOns = await addOnsModel.find({merchantId : foundProducts._id,isDeleted : false}).lean().exec()
+    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{products : foundProducts,addOns : foundAddOns})
   }
   catch(err){
     sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
   }
 }
-exports.getAllAddOnsForUsers = async(req,res) =>{
+exports.getAllAddOnsByMerchantId = async(req,res) =>{
   try{
     const foundAddOns = await addOnsModel.find({merchantId : req.params._id,isDeleted : false}).lean().exec()
     if(!foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_ADDONS_FOUND)
