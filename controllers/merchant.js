@@ -923,13 +923,13 @@ exports.getAllProducts = async (req, res) => {
         {
           $or: [
             {
-              productName: { $regex: req.body.search, $options: "$i" },
+              productName: { $regex: req.body.search || "", $options: "$i" },
             },
             {
-              brand: { $regex: req.body.search, $options: "$i" },
+              brand: { $regex: req.body.search || "", $options: "$i" },
             },
             {
-              description: { $regex: req.body.search, $options: "$i" },
+              description: { $regex: req.body.search || "", $options: "$i" },
             },
           ],
         },

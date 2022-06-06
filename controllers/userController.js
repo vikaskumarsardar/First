@@ -903,8 +903,7 @@ exports.getProductById = async(req,res) =>{
   try{
     const foundProducts = await productModel.find({_id : req.params._id}).lean().exec()
     if(!foundProducts) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
-    const foundAddOns = await addOnsModel.find({merchantId : foundProducts.merchantId}).lean().exec()
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{products : foundProducts,addOns : foundAddOns})
+    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{products : foundProducts})
   }
   catch(err){
     sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
