@@ -40,8 +40,7 @@ Router.post('/addCharges',VerifyMerchant,merchant.addCharges)
 Router.post('/updateCharges',VerifyMerchant,merchant.updateCharges)
 
 // ADDONS ROUTES
-// Router.post('/addAddOns',VerifyMerchant,uploadImage('addons','single'),merchant.addAddOns)
-Router.post("/addAddOns",VerifyMerchant,checkUploads,uploadImage('addons','single'),merchant.addAddOns);
+Router.post("/addAddOns",[VerifyMerchant,uploadImage('addons','single')],merchant.addAddOns);
 Router.get("/getAddOnPage",merchant.getAddOnPage);
 
 Router.get('/getAllAddOns',VerifyMerchant,merchant.getAllAddOns)

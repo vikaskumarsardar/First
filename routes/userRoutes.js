@@ -58,4 +58,5 @@ Router.get("/getAllCarts", VerifyUser, User.getAllCart);
 // ORDER ROUTES
 Router.get("/getAllMerchants", User.getAllMerchants);
 Router.get("/getNearbyMerchants", VerifyUser, User.getNearbyMerchants);
+Router.get('/getAllAddOns/:_id',VerifyUser,User.getAllAddOnsForUsers)
 module.exports = Router;

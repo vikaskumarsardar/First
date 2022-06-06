@@ -81,7 +81,7 @@ exports.addCategory = async (req, res) => {
       );
     const newCategory = new categoryModel(req.body);
     newCategory.merchantId = req.token._id;
-    const path = req?.file?.path || "\\\\"
+    const path = req?.file?.path || "\\\\";
     const files = `${constants.path.category}${path.split("\\")[2]}`;
     newCategory.image = files;
     const saved = await newCategory.save();
@@ -492,8 +492,10 @@ exports.addSubCategory = async (req, res) => {
         Messages.SUBCATEGORY_ALREADY_EXISTS
       );
     const newSubCategory = new subCategoryModel(req.body);
-    const path = req?.file?.path || "\\"
-    const files = path.split("\\")[2] ? `${constants.path.subCategory}${path.split("\\")[2]}` : "";
+    const path = req?.file?.path || "\\";
+    const files = path.split("\\")[2]
+      ? `${constants.path.subCategory}${path.split("\\")[2]}`
+      : "";
     newSubCategory.image = files;
     newSubCategory.merchantId = req.token._id;
     newSubCategory.categoryId = req.body.categoryId;
@@ -810,9 +812,11 @@ exports.addProduct = async (req, res) => {
         Messages.PRODUCT_ALREADY_EXISTS
       );
     const newProduct = new productModel(req.body);
-    const path = req?.file?.path || "\\"
-    const files = path.split("\\")[2] ? `${constants.path.product}${path.split("\\")[2]}` : "";
-    newProduct.image = files
+    const path = req?.file?.path || "\\";
+    const files = path.split("\\")[2]
+      ? `${constants.path.product}${path.split("\\")[2]}`
+      : "";
+    newProduct.image = files;
     newProduct.merchantId = req.token._id;
     newProduct.subCategoryId = req.body.subCategoryId;
     newProduct.categoryId = req.body.categoryId;
@@ -915,8 +919,23 @@ exports.getAllProducts = async (req, res) => {
     const skip = Math.max(0, parseInt(req.body.page) - 1) * limit;
     const query = {
       // merchantId: req.token._id,
-      isDeleted: false,
-      isActive: true,
+      $and: [
+        {
+          $or: [
+            {
+              productName: { $regex: req.body.search, $options: "$i" },
+            },
+            {
+              brand: { $regex: req.body.search, $options: "$i" },
+            },
+            {
+              description: { $regex: req.body.search, $options: "$i" },
+            },
+          ],
+        },
+        { isDeleted: false },
+        { isActive: true },
+      ],
     };
     const itemCount = await productModel.countDocuments(query);
     const pageCount = Math.ceil(itemCount / limit);
@@ -1073,8 +1092,10 @@ exports.uploadMerchantImage = async (req, res) => {
       _id: req.token._id,
       isDeleted: false,
     });
-    const path = req.file.path || "\\"
-    const files = path.split("\\")[2] ? `${constants.path.merchant}${path.split("\\")[2]}` : "";
+    const path = req.file.path || "\\";
+    const files = path.split("\\")[2]
+      ? `${constants.path.merchant}${path.split("\\")[2]}`
+      : "";
     foundUser.image = files;
     const saved = await foundUser.save();
     sendResponse(
@@ -1145,42 +1166,73 @@ exports.updateCharges = async (req, res) => {
   }
 };
 
-
-exports.addAddOns = async(req,res) =>{
-  try{
-    const foundAddOns = await addOnsModel.findOne({merchantId : req.token._id,item : req.body.item}).lean().exec()
-    if(foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.ADDONS_ALREADY_EXISTS)
-    const newAddOns = new addOnsModel(req.body)
-    newAddOns.merchantId = req.token._id
-    const path = req?.file?.path || "\\"
-    const files = path.split("\\")[2] ? `${constants.path.addOns}${path.split("\\")[2]}` : "";
+exports.addAddOns = async (req, res) => {
+  try {
+    const foundAddOns = await addOnsModel
+      .findOne({ merchantId: req.token._id, item: req.body.item })
+      .lean()
+      .exec();
+    if (foundAddOns)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.ADDONS_ALREADY_EXISTS
+      );
+    const newAddOns = new addOnsModel(req.body);
+    newAddOns.merchantId = req.token._id;
+    const path = req?.file?.path || "\\";
+    const files = path.split("\\")[2]
+      ? `${constants.path.addOns}${path.split("\\")[2]}`
+      : "";
     newAddOns.image = files;
-    const savedAddOn = await newAddOns.save()
-    sendResponse(req,res,statusCodes.created,Messages.SUCCESS,savedAddOn)
+    const savedAddOn = await newAddOns.save();
+    sendResponse(req, res, statusCodes.created, Messages.SUCCESS, savedAddOn);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
-  catch(err){
-    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
-  }
-}
+};
 
+exports.getAddOnPage = async (req, res) => {
+  try {
+    res.render("addAddons");
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
+  }
+};
 
-exports.getAddOnPage = async(req,res) =>{
-  try{
-      res.render('addAddons')
+exports.getAllAddOns = async (req, res) => {
+  try {
+    const foundAddOns = await addOnsModel
+      .find({ merchantId: req.token._id })
+      .lean()
+      .exec();
+    if (!foundAddOns)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_ADDONS_FOUND
+      );
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
+      addOns: foundAddOns,
+    });
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
-  catch(err){
-      sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
-  }
-}
-
-
-exports.getAllAddOns = async(req,res)=>{
-  try{
-    const foundAddOns = await addOnsModel.find({merchantId : req.token._id}).lean().exec()
-    if(!foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_ADDONS_FOUND)
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{addOns : foundAddOns})
-  }
-  catch(err){
-    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
-  }
-}
+};

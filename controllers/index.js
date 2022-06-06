@@ -77,4 +77,5 @@ module.exports = {
   getAllProductsFromAllMerchants : User.getAllProductsFromAllMerchants,
   getAllAddOns : Merchant.getAllAddOns,
   getAddOnPage : Merchant.getAddOnPage,
+  getAllAddOnsForUsers : User.getAllAddOnsForUsers,
 };

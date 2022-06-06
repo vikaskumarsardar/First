@@ -910,3 +910,13 @@ exports.getProductById = async(req,res) =>{
     sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
   }
 }
+exports.getAllAddOnsForUsers = async(req,res) =>{
+  try{
+    const foundAddOns = await addOnsModel.find({merchantId : req.params._id,isDeleted : false}).lean().exec()
+    if(!foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_ADDONS_FOUND)
+    sendResponse(req,res,statusCodes.SUCCESS,Messages.SUCCESS,foundAddOns)
+  }
+  catch(err){
+    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}

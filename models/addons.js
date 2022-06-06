@@ -4,6 +4,10 @@ const addOnsSchema = new mongoose.Schema({
                 price : Number,
                 image : String,
                 merchantId : String,
+                isDeleted : {
+                                type : Boolean,
+                                default : false
+                },
 },
 {
                 timestamps : true
