@@ -1152,15 +1152,35 @@ exports.addAddOns = async(req,res) =>{
     if(foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.ADDONS_ALREADY_EXISTS)
     const newAddOns = new addOnsModel(req.body)
     newAddOns.merchantId = req.token._id
-    const path = req.file?.path || "\\"
-    console.log(path);
+    const path = req?.file?.path || "\\"
     const files = path.split("\\")[2] ? `${constants.path.addOns}${path.split("\\")[2]}` : "";
     newAddOns.image = files;
     const savedAddOn = await newAddOns.save()
     sendResponse(req,res,statusCodes.created,Messages.SUCCESS,savedAddOn)
   }
   catch(err){
-    console.log(err)
+    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}
+
+
+exports.getAddOnPage = async(req,res) =>{
+  try{
+      res.render('addAddons')
+  }
+  catch(err){
+      sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}
+
+
+exports.getAllAddOns = async(req,res)=>{
+  try{
+    const foundAddOns = await addOnsModel.find({merchantId : req.token._id}).lean().exec()
+    if(!foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_ADDONS_FOUND)
+    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{addOns : foundAddOns})
+  }
+  catch(err){
     sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
   }
 }

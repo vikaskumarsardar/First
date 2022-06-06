@@ -75,4 +75,6 @@ module.exports = {
   getNearbyMerchants : User.getNearbyMerchants,
   addAddOns : Merchant.addAddOns,
   getAllProductsFromAllMerchants : User.getAllProductsFromAllMerchants,
+  getAllAddOns : Merchant.getAllAddOns,
+  getAddOnPage : Merchant.getAddOnPage,
 };

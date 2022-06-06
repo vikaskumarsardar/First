@@ -29,3 +29,15 @@
 // let data = undefined
 // data = !data ? {} : {[data] : true}
 // console.log(data);
+
+
+// if(true){
+//                 console.log("swapan")
+//                 console.log("kumar")
+//                 console.log("kjhflskhdkfghdskgf");
+// }
+// else{
+//                 console.log("else");
+// }
+
+console.log('swapan' === "swapan")

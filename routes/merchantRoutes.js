@@ -1,7 +1,7 @@
 const express = require("express");
 const Router = express.Router();
 const merchant = require("../controllers/");
-const {VerifyMerchant} = require('../middlewares/')
+const {VerifyMerchant,checkUploads} = require('../middlewares/')
 const {uploadImage} = require('../services/')
 
 // MERCHANT LOGIN ROUTES
@@ -40,6 +40,10 @@ Router.post('/addCharges',VerifyMerchant,merchant.addCharges)
 Router.post('/updateCharges',VerifyMerchant,merchant.updateCharges)
 
 // ADDONS ROUTES
-Router.post('/addAddOns',VerifyMerchant,uploadImage('addons','single'),merchant.addAddOns)
+// Router.post('/addAddOns',VerifyMerchant,uploadImage('addons','single'),merchant.addAddOns)
+Router.post("/addAddOns",VerifyMerchant,checkUploads,uploadImage('addons','single'),merchant.addAddOns);
+Router.get("/getAddOnPage",merchant.getAddOnPage);
+
+Router.get('/getAllAddOns',VerifyMerchant,merchant.getAllAddOns)
 
 module.exports = Router;

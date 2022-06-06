@@ -1,8 +1,15 @@
 const express = require("express");
 const path = require("path");
 const { constants } = require("./constants/");
+const cors  = require('cors')
+
 module.exports = (app) => {
   const views = path.join(__dirname, "views");
+  app.use(cors({
+    origin : "*"
+  }))
+  
+  
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.set("view engine", "ejs");
