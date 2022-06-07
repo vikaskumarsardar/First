@@ -63,7 +63,6 @@ exports.userRegister = async (req, res) => {
       {username : savedUser.username,firstname : savedUser.firstname,lastname : savedUser.lastname,email : savedUser.email,image : savedUser.image,phone : `${savedUser.countryCode}${savedUser.phone}`}
     );
   } catch (err) {
-    console.log(err);
     
     
     sendErrorResponse(
