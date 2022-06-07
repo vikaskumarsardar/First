@@ -26,6 +26,7 @@ exports.sendErrorResponse = (req, res, Code, error) => {
     throw err;
   }
 };
+
 exports.unAuthorizedResponse = (req, res, message) => {
   try {
     const Code = statusCodes.UnauthorizedAccess;
