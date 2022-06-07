@@ -135,7 +135,7 @@ exports.userLogin = async (req, res) => {
       res,
       statusCodes.OK,
       `${Messages.welcome} ${savedUser.username} `,
-      savedUser
+      {accessToken : savedUser.accessToken}
     );
   } catch (err) {
     console.log(err);
