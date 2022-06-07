@@ -916,7 +916,8 @@ exports.updateProductById = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
   try {
     const limit = parseInt(req.body.limit) || 10;
-    const skip = Math.max(0, parseInt(req.body.page) - 1) * limit;
+    const skip = Math.max(0, (parseInt(req.body.page) || 1) - 1) * limit;
+    console.log(skip);
     const query = {
       // merchantId: req.token._id,
       $and: [
