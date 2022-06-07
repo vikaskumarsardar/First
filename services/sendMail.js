@@ -10,7 +10,7 @@ const mailerService = async (route, email,password = "") => {
       secure: true,
       auth: {
         user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASSWORD,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
