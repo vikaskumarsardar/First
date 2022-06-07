@@ -33,7 +33,8 @@ exports.userRegister = async (req, res) => {
     const newUser = new UserModel(req.body);
     const accesstoken = await generateJWTTOken({ _id: newUser._id });
     newUser.accessToken = accesstoken;
-    req.body.verifyMethod = Messages.phone
+    req.body.verifyMethod = Messages.email
+
     if (req.body.verifyMethod == Messages.phone) {
       const OTP = await twilio(
         Messages.verfyPhone,
@@ -62,6 +63,9 @@ exports.userRegister = async (req, res) => {
       {username : savedUser.username,firstname : savedUser.firstname,lastname : savedUser.lastname,email : savedUser.email,image : savedUser.image,phone : `${savedUser.countryCode}${savedUser.phone}`}
     );
   } catch (err) {
+    console.log(err);
+    
+    
     sendErrorResponse(
       req,
       res,
