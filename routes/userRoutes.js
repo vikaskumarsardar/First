@@ -47,7 +47,7 @@ Router.get("/getAllCategory/:_id", User.getAllCategory);
 Router.get("/getAllProducts",VerifyUser,User.getAllProductsFromAllMerchants)
 
 // CART ROUTES
-Router.post("/addToCart/:_id", VerifyUser, User.addToCart);
+Router.post("/addToCart", VerifyUser, User.addToCart);
 Router.delete(
   "/removeItemsFromCart/:_id",
   VerifyUser,

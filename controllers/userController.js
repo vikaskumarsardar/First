@@ -33,7 +33,7 @@ exports.userRegister = async (req, res) => {
     const newUser = new UserModel(req.body);
     const accesstoken = await generateJWTTOken({ _id: newUser._id });
     newUser.accessToken = accesstoken;
-    req.body.verifyMethod = Messages.email
+    req.body.verifyMethod = Messages.email;
 
     if (req.body.verifyMethod == Messages.phone) {
       const OTP = await twilio(
@@ -60,11 +60,16 @@ exports.userRegister = async (req, res) => {
       res,
       statusCodes.created,
       Messages.registeredSuccessfully,
-      {username : savedUser.username,firstname : savedUser.firstname,lastname : savedUser.lastname,email : savedUser.email,image : savedUser.image,phone : `${savedUser.countryCode}${savedUser.phone}`}
+      {
+        username: savedUser.username,
+        firstname: savedUser.firstname,
+        lastname: savedUser.lastname,
+        email: savedUser.email,
+        image: savedUser.image,
+        phone: `${savedUser.countryCode}${savedUser.phone}`,
+      }
     );
   } catch (err) {
-    
-    
     sendErrorResponse(
       req,
       res,
@@ -87,54 +92,54 @@ exports.userLogin = async (req, res) => {
         },
       ],
     });
-    
+
     if (!doesExist || doesExist.isDeleted) {
       return sendErrorResponse(
         req,
         res,
         statusCodes.badRequest,
         Messages.userNotFound
-        );
-      }
-      if (!doesExist.isValid(req.body.password)) {
-        return sendErrorResponse(
-          req,
-          res,
-          statusCodes.badRequest,
-          Messages.passwordIncorrect
-          );
-        }
-        if (
-          (doesExist.verifyMethod == Messages.email &&
-            !doesExist.isEmailVerified) ||
-            (doesExist.verifyMethod == Messages.phone && !doesExist.isPhoneVerified)
-            ) {
-              return sendErrorResponse(
-                req,
-                res,
-                statusCodes.badRequest,
-                Messages.accountNotVerified
-                );
-              }
-              
-              if (doesExist.isBlocked) {
-                return sendErrorResponse(
-                  req,
-                  res,
-                  statusCodes.UnauthorizedAccess,
-                  Messages.blockedByAdmin
-                  );
-                }
-                const accesstoken = await generateJWTTOken({ _id: doesExist._id });
-                
-                doesExist.accessToken = accesstoken;
-                const savedUser = await doesExist.save();
+      );
+    }
+    if (!doesExist.isValid(req.body.password)) {
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.passwordIncorrect
+      );
+    }
+    if (
+      (doesExist.verifyMethod == Messages.email &&
+        !doesExist.isEmailVerified) ||
+      (doesExist.verifyMethod == Messages.phone && !doesExist.isPhoneVerified)
+    ) {
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.accountNotVerified
+      );
+    }
+
+    if (doesExist.isBlocked) {
+      return sendErrorResponse(
+        req,
+        res,
+        statusCodes.UnauthorizedAccess,
+        Messages.blockedByAdmin
+      );
+    }
+    const accesstoken = await generateJWTTOken({ _id: doesExist._id });
+
+    doesExist.accessToken = accesstoken;
+    const savedUser = await doesExist.save();
     sendResponse(
       req,
       res,
       statusCodes.OK,
       `${Messages.welcome} ${savedUser.username} `,
-      {accessToken : savedUser.accessToken}
+      { accessToken: savedUser.accessToken }
     );
   } catch (err) {
     console.log(err);
@@ -671,22 +676,19 @@ exports.addToCart = async (req, res) => {
       .find({ _id: { $in: req.body.addOnId } })
       .lean()
       .exec();
-    let addOnsTotal;
-    const addOnsArr = addOnsFound.map((result) => {
-      addOnsTotal += result.price;
-      return {
-        _id: result._id,
-        item: result.item,
-        price: result.price,
-      };
-    });
-    if (addOnsFound.length === 0)
-      return sendResponse(
-        req,
-        res,
-        statusCodes.badRequest,
-        Messages.NO_ADDONS_FOUND
-      );
+    let addOnsTotal = 0;
+    const addOnsArr =
+      addOnsFound.length > 0
+        ? addOnsFound.map((result) => {
+            addOnsTotal += result.price;
+            return {
+              _id: result._id,
+              item: result.item,
+              price: result.price,
+            };
+          })
+        : [];
+
     const itemPresentInCart = await cartModel
       .findOne({ userId: req.token._id })
       .exec();
@@ -694,14 +696,16 @@ exports.addToCart = async (req, res) => {
     const cartItems = itemPresentInCart ?? new cartModel();
     const quantity = Math.max(parseInt(req.body.quantity), 1) || 1;
     cartItems.items =
-      cartItems.items.findIndex((resp) => resp._id == req.params._id) > -1
+      cartItems.items.findIndex((resp) => resp._id == req.body.productId) > -1
         ? cartItems.items.map((resp) => {
-            if (resp._id == req.params._id) {
+            if (resp._id == req.body.productId) {
               return {
                 ...resp,
-                subTotal: (resp.price + addOnsTotal) * (resp.quantity + 1),
+                subTotal:
+                  (resp.price + addOnsTotal) *
+                  (req.body.quantity || resp.quantity + 1),
                 addOns: addOnsArr,
-                quantity: resp.quantity + 1,
+                quantity: req.body.quantity || parseInt(resp.quantity) + 1,
               };
             }
             return resp;
@@ -749,6 +753,7 @@ exports.removeItemsFromCart = async (req, res) => {
     const itemInCart = await cartModel
       .findOne({ userId: req.token._id })
       .exec();
+
     if (!itemInCart)
       return sendResponse(
         req,
@@ -757,25 +762,31 @@ exports.removeItemsFromCart = async (req, res) => {
         Messages.NO_CART_FOUND
       );
 
-      
-      const index = itemInCart.items.findIndex(
-        (items) => items._id == req.params._id
-        );
-        
-        const totalAddOns = itemInCart.addOns.reduce((a,b)=>{
-          return a + b 
-        },0)
-    
-    
+    const extraCharges = await chargesModel
+      .findOne({ _id: itemInCart.chargeId })
+      .lean()
+      .exec();
+
+    const index = itemInCart.items.findIndex(
+      (items) => items._id == req.params._id
+    );
+
     if (index > -1) {
+      const totalAddOns = itemInCart.items[index].addOns.reduce(
+        (a, b) => a + b.price,
+        0
+      );
       itemInCart.items[index].quantity == 1
-        ? itemInCart.items.splice(index, 1)
+        ? (itemInCart.items.splice(index, 1),
+          (itemInCart.total -= extraCharges.total))
         : (itemInCart.items[index] = {
             ...itemInCart.items[index],
-            subTotal: itemInCart.items[index].subTotal - (productFound.price + totalAddOns),
+            subTotal:
+              itemInCart.items[index].subTotal -
+              (productFound.price + totalAddOns),
             quantity: itemInCart.items[index].quantity - 1,
           });
-      itemInCart.total -= (productFound.price + totalAddOns);
+      itemInCart.total -= productFound.price + totalAddOns;
     } else
       return sendResponse(
         req,
@@ -814,7 +825,7 @@ exports.getAllCart = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_CART_FOUND
       );
-      console.log(foundCartItems);
+    console.log(foundCartItems);
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
       results: foundCartItems,
     });
@@ -901,36 +912,120 @@ exports.getNearbyMerchants = async (req, res) => {
   }
 };
 
+exports.getAllProductsFromAllMerchants = async (req, res) => {
+  try {
+    const limit = parseInt(req.body.limit) || 10;
+    const skip = Math.max(0, (parseInt(req.body.page) || 1) - 1) * limit;
+    const search = req.body.search || "";
+    const query = {
+      $and: [
+        {
+          $or: [
+            {
+              productName: { $regex: search, $options: "$i" },
+            },
+            {
+              brand: { $regex: search, $options: "$i" },
+            },
+            {
+              description: { $regex: search, $options: "$i" },
+            },
+          ],
+        },
+        { isDeleted: false },
+        { isActive: true },
+      ],
+    };
+    const itemCount = await productModel.countDocuments(query);
+    const pageCount = Math.ceil(itemCount / limit);
+    const foundProducts = await productModel
+      .find(query, {
+        isActive: 0,
+        isDeleted: 0,
+        isBlocked: 0,
+        createdAt: 0,
+        updatedAt: 0,
+        __v: 0,
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+      .exec();
+    if (!foundProducts)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    const message =
+      allProduts.length === 0 ? Messages.NO_PRODUCT_FOUND : Messages.SUCCESS;
 
-exports.getAllProductsFromAllMerchants = async(req,res) =>{
-  try{
-    const foundProducts = await productModel.find({},{isActive : 0,isDeleted : 0,isBlocked : 0,createdAt : 0,updatedAt : 0,__v : 0}).lean().exec()
-    if(!foundProducts) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,foundProducts)
+    sendResponse(req, res, statusCodes.OK, message, {
+      products: foundProducts,
+      pageCount,
+      itemCount,
+    });
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
-  catch(err){
-    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
-  }
-}
+};
 
-exports.getProductById = async(req,res) =>{
-  try{
-    const foundProducts = await productModel.find({_id : req.params._id}).lean().exec()
-    if(!foundProducts) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_PRODUCT_FOUND)
-    const foundAddOns = await addOnsModel.find({merchantId : foundProducts._id,isDeleted : false}).lean().exec()
-    sendResponse(req,res,statusCodes.OK,Messages.SUCCESS,{products : foundProducts,addOns : foundAddOns})
+exports.getProductById = async (req, res) => {
+  try {
+    const foundProducts = await productModel
+      .find({ _id: req.params._id })
+      .lean()
+      .exec();
+    if (!foundProducts)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_PRODUCT_FOUND
+      );
+    const foundAddOns = await addOnsModel
+      .find({ merchantId: foundProducts._id, isDeleted: false })
+      .lean()
+      .exec();
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
+      products: foundProducts,
+      addOns: foundAddOns,
+    });
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
-  catch(err){
-    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+};
+exports.getAllAddOnsByMerchantId = async (req, res) => {
+  try {
+    const foundAddOns = await addOnsModel
+      .find({ merchantId: req.params._id, isDeleted: false })
+      .lean()
+      .exec();
+    if (!foundAddOns)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_ADDONS_FOUND
+      );
+    sendResponse(req, res, statusCodes.SUCCESS, Messages.SUCCESS, foundAddOns);
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
-}
-exports.getAllAddOnsByMerchantId = async(req,res) =>{
-  try{
-    const foundAddOns = await addOnsModel.find({merchantId : req.params._id,isDeleted : false}).lean().exec()
-    if(!foundAddOns) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_ADDONS_FOUND)
-    sendResponse(req,res,statusCodes.SUCCESS,Messages.SUCCESS,foundAddOns)
-  }
-  catch(err){
-    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
-  }
-}
+};
