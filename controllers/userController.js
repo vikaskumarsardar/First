@@ -965,6 +965,7 @@ exports.getAllProductsFromAllMerchants = async (req, res) => {
       products: foundProducts,
       pageCount,
       itemCount,
+      search : req.body.search
     });
   } catch (err) {
     sendErrorResponse(
