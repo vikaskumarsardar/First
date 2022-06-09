@@ -959,7 +959,7 @@ exports.getAllProductsFromAllMerchants = async (req, res) => {
         Messages.NO_PRODUCT_FOUND
       );
     const message =
-      allProduts.length === 0 ? Messages.NO_PRODUCT_FOUND : Messages.SUCCESS;
+    foundProducts.length === 0 ? Messages.NO_PRODUCT_FOUND : Messages.SUCCESS;
 
     sendResponse(req, res, statusCodes.OK, message, {
       products: foundProducts,
