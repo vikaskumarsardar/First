@@ -924,12 +924,12 @@ exports.getAllProductsFromAllMerchants = async (req, res) => {
             {
               productName: { $regex: search, $options: "$i" },
             },
-            {
-              brand: { $regex: search, $options: "$i" },
-            },
-            {
-              description: { $regex: search, $options: "$i" },
-            },
+            // {
+            //   brand: { $regex: search, $options: "$i" },
+            // },
+            // {
+            //   description: { $regex: search, $options: "$i" },
+            // },
           ],
         },
         { isDeleted: false },
@@ -965,7 +965,6 @@ exports.getAllProductsFromAllMerchants = async (req, res) => {
       products: foundProducts,
       pageCount,
       itemCount,
-      search : `search hai ---->|${req.body.search}|<--`
     });
   } catch (err) {
     sendErrorResponse(
