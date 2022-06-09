@@ -8,7 +8,7 @@ const {uploadImage} = require("../services/");
 Router.post("/register", Admin.adminRegister);
 Router.post("/login", Admin.adminLogin);
 Router.post("/blockUnblock", VerifyAdmin, Admin.blockUnblock);
-Router.post("/deleteUser", VerifyAdmin, Admin.deleteUser);
+Router.delete("/deleteUser", VerifyAdmin, Admin.deleteUser);
 Router.post(
   "/activateDeactivateUser",
   VerifyAdmin,
