@@ -144,6 +144,8 @@ exports.deleteUser = async (req, res) => {
       isUpdated.username
     );
   } catch (err) {
+
+    console.log(err);
     sendErrorResponse(
       req,
       res,

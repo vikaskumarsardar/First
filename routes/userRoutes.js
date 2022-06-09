@@ -44,7 +44,7 @@ Router.delete("/deleteAddress", VerifyUser, User.deleteUserAddress);
 // DUMMY ROUTES
 Router.get("/getAllDummyData", VerifyUser, User.getAllDummyData);
 Router.get("/getAllCategory/:_id", User.getAllCategory);
-Router.get("/getAllProducts",VerifyUser,User.getAllProductsFromAllMerchants)
+Router.post("/getAllProducts",VerifyUser,User.getAllProductsFromAllMerchants)
 
 // CART ROUTES
 Router.post("/addToCart", VerifyUser, User.addToCart);
