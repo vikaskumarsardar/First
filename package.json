@@ -4,8 +4,7 @@
   "description": "First task Project",
   "main": "server.js",
   "scripts": {
-    "start": "npx nodemon server.js",
-    "dev": "export NODE_ENV=dev && pm2 start server.js --name DEV_FOOD_DELIVERY"
+    "start": "npx nodemon server.js"
   },
   "keywords": [],
   "author": "swapan kumar sardar",
@@ -20,6 +19,7 @@
     "joi": "^17.6.0",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.3.2",
+    "morgan": "^1.10.0",
     "multer": "^1.4.4",
     "nodemailer": "^6.7.5",
     "twilio": "^3.77.0",

@@ -18,10 +18,10 @@ const twilioService = async (route, countryCode, phone) => {
         ? `${Messages.RESEND_OTP} ${sixDigitNum}`
         : Messages.DEFAULT_BODY;
 
-    const client = twilio(config.get("twilioOptions.ACCOUNT_SID"), config.get("twilioOptions.AUTH_TOKEN"));
+    const client = twilio(process.env.ACCOUNT_SID, process.env.AUTH_TOKEN);
     const clientMessage = await client.messages.create({
       to: `${countryCode}${phone}`,
-      from: config.get("twilioOptions.TWILIO_NUMBER"),
+      from: process.env.TWILIO_NUMBER,
       body: body,
     });
     return sixDigitNum;
