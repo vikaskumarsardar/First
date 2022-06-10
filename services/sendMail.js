@@ -1,5 +1,6 @@
 const nodeMailer = require("nodemailer");
 const { v1: uuidv1 } = require("uuid");
+const config = require('config')
 const mailerService = async (route, email,password = "") => {
   const host = email.split("@")[1];
   try {
@@ -9,8 +10,8 @@ const mailerService = async (route, email,password = "") => {
       port: 465,
       secure: true,
       auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASS,
+        user: config.get("emailOptions.EMAIL"),
+        pass: config.get("emailOptions.EMAIL_PASS"),
       },
     });
 
@@ -25,7 +26,7 @@ const mailerService = async (route, email,password = "") => {
                     <p style="text-align:left;color:#000;font-size: 14px;">
                     <b>To reset password please click the link below.</b> </p>
                     <br><div style="display:inline-block;background:#00b9ee; padding:10px;-webkit-border-radius: 10px; -moz-border-radius: 4px; border-radius: 4px;">
-                    <a style="text-decoration:none;color:#fff;font-size:15px;"href="https://food-app-hai.herokuapp.com/api/user/forgetPassword/${emailString}">Reset your password</a></div>
+                    <a style="text-decoration:none;color:#fff;font-size:15px;"href="${config.get("USER_ROUTE_AWS")}/forgetPassword/${emailString}">Reset your password</a></div>
                     <br><br>
                     <p style="text-align:left;color:#000; font-size: 14px;">
                     <h4>Thanks,</h4>
@@ -41,7 +42,7 @@ const mailerService = async (route, email,password = "") => {
                     <b>Thanks for creating a shopping cart account. To continue please confirm your
                     email address by clicking the button below.</b> </p>
                     <br><div style="display:inline-block;background:#00b9ee; padding:10px;-webkit-border-radius: 10px; -moz-border-radius: 4px; border-radius: 4px;">
-                    <a style="text-decoration:none;color:#fff;font-size:15px;"href="https://food-app-hai.herokuapp.com/api/user/verifyUser/${emailString}">Activate Your Account</a></div>
+                    <a style="text-decoration:none;color:#fff;font-size:15px;"href="${config.get("USER_ROUTE_AWS")}/verifyUser/${emailString}">Activate Your Account</a></div>
                     <br><br>
                     <p style="text-align:left;color:#000; font-size: 14px;">    
                     <h4>    Thanks,</h4>
@@ -58,7 +59,7 @@ const mailerService = async (route, email,password = "") => {
                     <b>Thanks for creating a shopping cart account. To continue please confirm your
                     email address by clicking the button below.</b> </p>
                     <br><div style="display:inline-block;background:#00b9ee; padding:10px;-webkit-border-radius: 10px; -moz-border-radius: 4px; border-radius: 4px;">
-                    <a style="text-decoration:none;color:#fff;font-size:15px;"href="https://food-app-hai.herokuapp.com/api/user/verifyUser/${emailString}">Activate Your Account</a></div>
+                    <a style="text-decoration:none;color:#fff;font-size:15px;"href="${config.get("USER_ROUTE_AWS")}/verifyUser/${emailString}">Activate Your Account</a></div>
                     <br><br>
                     <p style="text-align:left;color:#000; font-size: 14px;">    
                     <h4>    Thanks,</h4>
@@ -91,7 +92,7 @@ const mailerService = async (route, email,password = "") => {
     }
 
     await transporter.sendMail({
-      from: `"${process.env.COMPANY}" <${process.env.EMAIL}>`,
+      from: `"${config.get("COMPANY")}" <${config.get("emailOptions.EMAIL")}>`,
       to: email,
       subject: subject,
       html: html,

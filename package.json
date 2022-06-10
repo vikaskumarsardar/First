@@ -4,13 +4,15 @@
   "description": "First task Project",
   "main": "server.js",
   "scripts": {
-    "start": "npx nodemon server.js"
+    "start": "npx nodemon server.js",
+    "dev": "export NODE_ENV=dev && pm2 start server.js --name DEV_FOOD_DELIVERY"
   },
   "keywords": [],
   "author": "swapan kumar sardar",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.20.0",
+    "config": "^3.3.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
     "ejs": "^3.1.8",

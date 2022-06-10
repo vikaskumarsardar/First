@@ -144,8 +144,6 @@ exports.deleteUser = async (req, res) => {
       isUpdated.username
     );
   } catch (err) {
-
-    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -184,8 +182,10 @@ exports.activateDeactivateUser = async (req, res) => {
 exports.UploadOne = async (req, res) => {
   try {
     const foundUser = await AdminModel.findOne({ _id: req.token._id });
-    const path = req.file?.path || "\\"
-    const files = req.file.path.split("\\")[2] ? `${constants.path.admin}${req.file.path.split("\\")[2]}` : "";
+    const path = req.file?.path || "\\";
+    const files = req.file.path.split("\\")[2]
+      ? `${constants.path.admin}${req.file.path.split("\\")[2]}`
+      : "";
     foundUser.image.push(files);
     const saved = await foundUser.save();
     sendResponse(
@@ -209,8 +209,10 @@ exports.UploadManyImages = async (req, res) => {
   try {
     const foundUser = await AdminModel.findOne({ _id: req.token._id });
     const imageArr = req.files.map((resp) => {
-      const path = resp?.path || "\\"
-      return path.split("\\")[2] ? `${constants.path.admin}${path.split("\\")[2]}` : "";
+      const path = resp?.path || "\\";
+      return path.split("\\")[2]
+        ? `${constants.path.admin}${path.split("\\")[2]}`
+        : "";
     });
 
     foundUser.image = [...foundUser.image, ...imageArr];
@@ -254,9 +256,8 @@ exports.UploadFields = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     let { pageNo, limit, search, sort, filterKey } = req.query;
-    
-    filterKey = !filterKey ? {} : {[filterKey] : true}
-    console.log(filterKey);
+
+    filterKey = !filterKey ? {} : { [filterKey]: true };
     search = search || "";
     sort = sort || 1;
     limit = limit || constants.limit;
@@ -390,7 +391,6 @@ exports.addMerchant = async (req, res) => {
       savedMerchant
     );
   } catch (err) {
-    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -507,10 +507,8 @@ exports.getAllMerchants = async (req, res) => {
       .find({ adminId: req.token._id })
       .lean()
       .exec();
-    console.log(req.token._id);
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, merchants);
   } catch (err) {
-    console.log(err);
     sendErrorResponse(
       req,
       res,

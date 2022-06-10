@@ -142,7 +142,6 @@ exports.userLogin = async (req, res) => {
       { accessToken: savedUser.accessToken }
     );
   } catch (err) {
-    console.log(err);
     sendErrorResponse(
       req,
       res,
@@ -825,7 +824,6 @@ exports.getAllCart = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_CART_FOUND
       );
-    console.log(foundCartItems);
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
       results: foundCartItems,
     });
@@ -902,7 +900,6 @@ exports.getNearbyMerchants = async (req, res) => {
       itemCount,
     });
   } catch (err) {
-    console.log(err);
     sendErrorResponse(
       req,
       res,
