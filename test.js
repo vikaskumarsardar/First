@@ -39,3 +39,15 @@
 // else{
 //                 console.log("else");
 // }
+
+
+const s = {
+                a : 2,
+                a : 90,
+                b : 78
+}
+for(i in s){
+
+                
+                console.log(s[i]);
+}

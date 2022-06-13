@@ -8,7 +8,7 @@ const {
   chargesModel,
   merchantModel,
   addOnsModel,
-  orderModel
+  orderModel,
 } = require("../models");
 const jwt = require("jsonwebtoken");
 const { twilio, nodeMailer } = require("../services/");
@@ -690,24 +690,17 @@ exports.addToCart = async (req, res) => {
         : [];
 
     const itemPresentInCart = await cartModel
-      .findOne({ userId: req.token._id ,isPlaced : false})
+      .findOne({ userId: req.token._id, isPlaced: false })
       .exec();
-
-      
-      const totalCharges = await chargesModel
-      .findOne({
-        merchantId: productFound.merchantId,
-      })
-      .lean()
-      .exec();
-      
 
     const cartItems = itemPresentInCart ?? new cartModel();
     const quantity = Math.max(parseInt(req.body.quantity), 1) || 1;
+    const merchants = {};
     cartItems.items =
       cartItems.items.findIndex((resp) => resp._id == req.body.productId) > -1
         ? cartItems.items.map((resp) => {
             if (resp._id == req.body.productId) {
+              merchants["merchantId"] = productFound.merchantId;
               return {
                 ...resp,
                 subTotal:
@@ -719,7 +712,8 @@ exports.addToCart = async (req, res) => {
             }
             return resp;
           })
-        : [
+        : ((merchants["merchantId"] = productFound.merchantId),
+          [
             ...cartItems.items,
             {
               _id: productFound._id,
@@ -728,19 +722,43 @@ exports.addToCart = async (req, res) => {
               addOns: addOnsArr,
               image: productFound.image,
               subTotal: (productFound.price + addOnsTotal) * quantity,
-              deliveryCharges : totalCharges.total
             },
-          ];
-    
+          ]);
 
-    cartItems.total =
-      cartItems.items.reduce((a, b) => a + b.subTotal + b.deliveryCharges , 0);
+    const merchantsArr = [];
+    for (i in merchants) {
+      merchantsArr.push(merchants[i]);
+    }
+
+    const totalCharges = await chargesModel
+      .aggregate([
+        {
+          $match: {
+            merchantId: { $in: merchantsArr },
+          },
+        },
+        {
+          $group: {
+            _id: "$_id",
+            totalCharges: {
+              $sum: "$total",
+            },
+          },
+        },
+      ])
+      .exec();
+
+    console.log(totalCharges,merchantsArr);
+
+    cartItems.total = cartItems.items.reduce((a, b) => a + b.subTotal, 0);
     cartItems.userId = req.token._id;
     cartItems.chargeId = totalCharges._id;
     const savedCart = await cartItems.save();
 
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, savedCart);
   } catch (err) {
+    console.log(err);
+
     sendErrorResponse(
       req,
       res,
@@ -757,7 +775,7 @@ exports.removeItemsFromCart = async (req, res) => {
       .lean()
       .exec();
     const itemInCart = await cartModel
-      .findOne({ userId: req.token._id,isPlaced : false })
+      .findOne({ userId: req.token._id, isPlaced: false })
       .exec();
 
     if (!itemInCart)
@@ -821,7 +839,10 @@ exports.removeItemsFromCart = async (req, res) => {
 exports.getAllCart = async (req, res) => {
   try {
     const foundCartItems = await cartModel
-      .findOne({ userId: req.token._id,isPlaced : false }, { items: 1, _id: 0, total: 1 })
+      .findOne(
+        { userId: req.token._id, isPlaced: false },
+        { items: 1, _id: 0, total: 1 }
+      )
       .lean()
       .exec();
     if (!foundCartItems)
@@ -1037,7 +1058,7 @@ exports.getAllAddOnsByMerchantId = async (req, res) => {
 exports.placeOrders = async (req, res) => {
   try {
     const foundCart = await cartModel
-      .findOne({ userId: req.token._id,isPlaced : false })
+      .findOne({ userId: req.token._id, isPlaced: false })
       .lean()
       .exec();
     if (!foundCart)
@@ -1047,13 +1068,21 @@ exports.placeOrders = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_CART_FOUND
       );
-const newOrder = new orderModel(req.body)
-newOrder.userID = req.token._id
-const foundCartToModify = await cartModel.findOne({userId : req.token._id,isPlaced : false}).exec()
-foundCartToModify.isPlaced = true
-await foundCartToModify.save()
-const savedOrder = await newOrder.save()
-sendResponse(req,res,statusCodes.SUCCESS,Messages.SUCCESFULLY_PLACED_ORDER,savedOrder)
+    const newOrder = new orderModel(req.body);
+    newOrder.userID = req.token._id;
+    const foundCartToModify = await cartModel
+      .findOne({ userId: req.token._id, isPlaced: false })
+      .exec();
+    foundCartToModify.isPlaced = true;
+    await foundCartToModify.save();
+    const savedOrder = await newOrder.save();
+    sendResponse(
+      req,
+      res,
+      statusCodes.SUCCESS,
+      Messages.SUCCESFULLY_PLACED_ORDER,
+      savedOrder
+    );
   } catch (err) {
     sendErrorResponse(
       req,
