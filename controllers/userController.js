@@ -146,8 +146,7 @@ exports.userLogin = async (req, res) => {
       req,
       res,
       statusCodes.internalServerError,
-      {message : Messages.internalServerError,
-        error :err}
+      Messages.internalServerError
     );
   }
 };
@@ -717,7 +716,7 @@ exports.addToCart = async (req, res) => {
               price: productFound.price,
               quantity: quantity,
               addOns: addOnsArr,
-              image : productFound.image,
+              image: productFound.image,
               subTotal: (productFound.price + addOnsTotal) * quantity,
             },
           ];
@@ -958,7 +957,7 @@ exports.getAllProductsFromAllMerchants = async (req, res) => {
         Messages.NO_PRODUCT_FOUND
       );
     const message =
-    foundProducts.length === 0 ? Messages.NO_PRODUCT_FOUND : Messages.SUCCESS;
+      foundProducts.length === 0 ? Messages.NO_PRODUCT_FOUND : Messages.SUCCESS;
 
     sendResponse(req, res, statusCodes.OK, message, {
       products: foundProducts,
@@ -1029,15 +1028,25 @@ exports.getAllAddOnsByMerchantId = async (req, res) => {
   }
 };
 
-exports.placeOrders = async(req,res) =>{
-  try{
-    const foundCart = await cartModel.findOne({userId : req.token._id}).lean().exec()
-    if(!foundCart) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_CART_FOUND)
-    
-    
-
+exports.placeOrders = async (req, res) => {
+  try {
+    const foundCart = await cartModel
+      .findOne({ userId: req.token._id })
+      .lean()
+      .exec();
+    if (!foundCart)
+      return sendResponse(
+        req,
+        res,
+        statusCodes.badRequest,
+        Messages.NO_CART_FOUND
+      );
+  } catch (err) {
+    sendErrorResponse(
+      req,
+      res,
+      statusCodes.internalServerError,
+      Messages.internalServerError
+    );
   }
-  catch(err){
-    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
-  }
-}
+};
