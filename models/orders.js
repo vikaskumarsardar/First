@@ -8,6 +8,10 @@ const orderSchema = new mongoose.Schema(
     subTotal: {type:Number,default: 0},
     deliveryCharge: {type:Number,default: 0},
     status : {type:String,default:""},
+    isDelivered : {
+      type :Boolean,
+      default : false
+    },
     merchantId : {
       type : mongoose.Types.ObjectId,
       ref : "Merchant"

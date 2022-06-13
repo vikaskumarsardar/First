@@ -716,6 +716,7 @@ exports.addToCart = async (req, res) => {
               price: productFound.price,
               quantity: quantity,
               addOns: addOnsArr,
+              image : productFound.image,
               subTotal: (productFound.price + addOnsTotal) * quantity,
             },
           ];
@@ -1026,3 +1027,16 @@ exports.getAllAddOnsByMerchantId = async (req, res) => {
     );
   }
 };
+
+exports.placeOrders = async(req,res) =>{
+  try{
+    const foundCart = await cartModel.findOne({userId : req.token._id}).lean().exec()
+    if(!foundCart) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_CART_FOUND)
+
+    
+
+  }
+  catch(err){
+    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}
