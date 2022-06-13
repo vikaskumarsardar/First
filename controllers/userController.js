@@ -1032,7 +1032,7 @@ exports.placeOrders = async(req,res) =>{
   try{
     const foundCart = await cartModel.findOne({userId : req.token._id}).lean().exec()
     if(!foundCart) return sendResponse(req,res,statusCodes.badRequest,Messages.NO_CART_FOUND)
-
+    
     
 
   }
