@@ -11,6 +11,14 @@ const cartSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Users",
     },
+    isPlaced : {
+      type : Boolean,
+      default : false
+    },
+    deliveryCharges : {
+      type : Number,
+      default : 0
+    }
   },
   {
     timestamps: true,
