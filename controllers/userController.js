@@ -1047,11 +1047,10 @@ exports.placeOrders = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_CART_FOUND
       );
-const newOrder = new orderModel(req.body)
+const newOrder = new orderModel({items : foundCart.items,total : foundCart.total,userId : foundCart.userID,})
 newOrder.userID = req.token._id
-const foundCartToModify = await cartModel.findOne({userId : req.token._id,isPlaced : false}).exec()
-foundCartToModify.isPlaced = true
-await foundCartToModify.save()
+foundCart.isPlaced = true
+await foundCart.save()
 const savedOrder = await newOrder.save()
 sendResponse(req,res,statusCodes.SUCCESS,Messages.SUCCESFULLY_PLACED_ORDER,savedOrder)
   } catch (err) {
@@ -1063,3 +1062,16 @@ sendResponse(req,res,statusCodes.SUCCESS,Messages.SUCCESFULLY_PLACED_ORDER,saved
     );
   }
 };
+
+
+exports.clearCart = async(req,res) =>{
+  try{
+
+    const cartDeleted = await cartModel.updateOne({userID : req.token._id,isPlaced : false},{items : []}).lean().exec()
+    return cartDeleted.modifiedCount > 0 ? sendResponse(req,res,statusCodes.SUCCESS,Messages.CLEARED_CART_SUCCESSFULLY) : sendErrorResponse(req,res,statusCodes.badRequest,Messages.NO_CART_FOUND)
+    
+  }
+  catch(err){
+    sendErrorResponse(req,res,statusCodes.internalServerError,Messages.internalServerError)
+  }
+}

@@ -12,6 +12,11 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isCanceled : {
+      type : Boolean,
+      default : false
+    }
+
   },
   {
     timestamps: true,

@@ -54,9 +54,13 @@ Router.delete(
   User.removeItemsFromCart
 );
 Router.get("/getAllCarts", VerifyUser, User.getAllCart);
+Router.delete("/clearCart", VerifyUser, User.clearCart);
 
 // ORDER ROUTES
 Router.get("/getAllMerchants", User.getAllMerchants);
 Router.get("/getNearbyMerchants", VerifyUser, User.getNearbyMerchants);
 Router.get('/getAllAddOns/:_id',VerifyUser,User.getAllAddOnsByMerchantId)
+// ORDER ROUTES
+
+Router.post("/placeOrder",VerifyUser,User.placeOrders)
 module.exports = Router;

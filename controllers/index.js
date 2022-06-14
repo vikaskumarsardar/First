@@ -78,4 +78,6 @@ module.exports = {
   getAllAddOns : Merchant.getAllAddOns,
   getAddOnPage : Merchant.getAddOnPage,
   getAllAddOnsByMerchantId : User.getAllAddOnsByMerchantId,
+  placeOrders : User.placeOrders,
+  clearCart : User.clearCart
 };
