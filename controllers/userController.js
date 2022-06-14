@@ -1085,7 +1085,7 @@ exports.clearCart = async (req, res) => {
       ? sendResponse(
           req,
           res,
-          statusCodes.SUCCESS,
+          statusCodes.OK,
           Messages.CLEARED_CART_SUCCESSFULLY,
           cartDeleted
         )
