@@ -1047,7 +1047,7 @@ exports.placeOrders = async (req, res) => {
         statusCodes.badRequest,
         Messages.NO_CART_FOUND
       );
-const newOrder = new orderModel({items : foundCart.items,total : foundCart.total,userId : foundCart.userID,})
+const newOrder = new orderModel({items : foundCart.items,total : foundCart.total,userId : foundCart.userID})
 newOrder.userID = req.token._id
 foundCart.isPlaced = true
 await foundCart.save()
