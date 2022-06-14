@@ -1078,15 +1078,16 @@ exports.placeOrders = async (req, res) => {
 exports.clearCart = async (req, res) => {
   try {
     const cartDeleted = await cartModel
-      .updateOne({ userID: req.token._id, isPlaced: false }, { items: [],total : 0 })
+      .findOneAndUpdate({ userID: req.token._id, isPlaced: false }, { items: [],total : 0 },{new : true})
       .lean()
       .exec();
-    return cartDeleted.modifiedCount > 0
+    return cartDeleted
       ? sendResponse(
           req,
           res,
           statusCodes.SUCCESS,
-          Messages.CLEARED_CART_SUCCESSFULLY
+          Messages.CLEARED_CART_SUCCESSFULLY,
+          cartDeleted
         )
       : sendErrorResponse(
           req,
