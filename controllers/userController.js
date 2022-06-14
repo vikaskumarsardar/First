@@ -1070,7 +1070,9 @@ exports.placeOrders = async (req, res) => {
       req,
       res,
       statusCodes.internalServerError,
-      Messages.internalServerError
+      {message : Messages.internalServerError,
+        error : err
+      }
     );
   }
 };
