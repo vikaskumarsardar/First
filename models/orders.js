@@ -12,6 +12,10 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    orderId : {
+      type : Number,
+      default :Math.ceil(1E9 * Math.random()) 
+    },
     isCanceled : {
       type : Boolean,
       default : false
