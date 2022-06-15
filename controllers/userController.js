@@ -1040,7 +1040,6 @@ exports.placeOrders = async (req, res) => {
   try {
     const foundCart = await cartModel
       .findOne({ userId: req.token._id, isPlaced: false })
-      .lean()
       .exec();
     if (!foundCart)
       return sendResponse(
@@ -1061,7 +1060,7 @@ exports.placeOrders = async (req, res) => {
     sendResponse(
       req,
       res,
-      statusCodes.SUCCESS,
+      statusCodes.created,
       Messages.SUCCESFULLY_PLACED_ORDER,
       savedOrder
     );
@@ -1070,9 +1069,7 @@ exports.placeOrders = async (req, res) => {
       req,
       res,
       statusCodes.internalServerError,
-      {message : Messages.internalServerError,
-        error : err
-      }
+      Messages.internalServerError,
     );
   }
 };
