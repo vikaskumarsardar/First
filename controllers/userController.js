@@ -1054,7 +1054,6 @@ exports.placeOrders = async (req, res) => {
       total: foundCart.total,
       userId: foundCart.userID,
     });
-    newOrder.userID = req.token._id;
     foundCart.isPlaced = true;
     await foundCart.save();
     const savedOrder = await newOrder.save();
