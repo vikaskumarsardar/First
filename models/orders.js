@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const autoIncrement = require('mongoose-auto-increment')
+const {connection} = require('../config/')
+
 const orderSchema = new mongoose.Schema(
   {
     items: [{ type: Object, default: {} }],
@@ -31,7 +33,7 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-autoIncrement.initialize(mongoose)
+autoIncrement.initialize(connection)
 orderSchema.plugin(autoIncrement.plugin,{
 model:"Orders",
 field : "orderId",
