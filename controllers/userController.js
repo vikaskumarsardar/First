@@ -830,7 +830,7 @@ exports.getAllCart = async (req, res) => {
       return sendErrorResponse(
         req,
         res,
-        statusCodes.badRequest,
+        statusCodes.OK,
         Messages.NO_CART_FOUND
       );
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
