@@ -827,11 +827,18 @@ exports.getAllCart = async (req, res) => {
       .lean()
       .exec();
     if (!foundCartItems)
-      return sendErrorResponse(
+      return sendResponse(
         req,
         res,
         statusCodes.OK,
-        Messages.NO_CART_FOUND
+        Messages.NO_CART_FOUND,
+        {
+          results : {
+            items : [],
+            total : 0
+          }
+        }
+
       );
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
       results: foundCartItems,
