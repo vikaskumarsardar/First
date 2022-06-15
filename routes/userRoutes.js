@@ -63,4 +63,5 @@ Router.get('/getAllAddOns/:_id',VerifyUser,User.getAllAddOnsByMerchantId)
 // ORDER ROUTES
 
 Router.post("/placeOrder",VerifyUser,User.placeOrders)
+Router.post("/placedOrder",VerifyUser,User.placedOrders)
 module.exports = Router;

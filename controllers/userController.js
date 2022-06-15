@@ -17,6 +17,7 @@ const { statusCodes } = require("../statusCodes/");
 const { sendResponse, sendErrorResponse } = require("../services/");
 const { constants } = require("../constants/");
 const { ObjectIsValid, generateJWTTOken } = require("../lib");
+const message = require("../message/message");
 
 exports.userRegister = async (req, res) => {
   try {
@@ -827,19 +828,12 @@ exports.getAllCart = async (req, res) => {
       .lean()
       .exec();
     if (!foundCartItems)
-      return sendResponse(
-        req,
-        res,
-        statusCodes.OK,
-        Messages.NO_CART_FOUND,
-        {
-          results : {
-            items : [],
-            total : 0
-          }
-        }
-
-      );
+      return sendResponse(req, res, statusCodes.OK, Messages.NO_CART_FOUND, {
+        results: {
+          items: [],
+          total: 0,
+        },
+      });
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, {
       results: foundCartItems,
     });
@@ -1076,7 +1070,7 @@ exports.placeOrders = async (req, res) => {
       req,
       res,
       statusCodes.internalServerError,
-      Messages.internalServerError,
+      Messages.internalServerError
     );
   }
 };
@@ -1084,7 +1078,11 @@ exports.placeOrders = async (req, res) => {
 exports.clearCart = async (req, res) => {
   try {
     const cartDeleted = await cartModel
-      .findOneAndUpdate({ userID: req.token._id, isPlaced: false }, { items: [],total : 0 },{new : true})
+      .findOneAndUpdate(
+        { userID: req.token._id, isPlaced: false },
+        { items: [], total: 0 },
+        { new: true }
+      )
       .lean()
       .exec();
     return cartDeleted
@@ -1108,5 +1106,19 @@ exports.clearCart = async (req, res) => {
       statusCodes.internalServerError,
       Messages.internalServerError
     );
+  }
+};
+
+exports.placedOrders = async (req, res) => {
+  try {
+    const foundOrders = await orderModel
+      .find({ userID: req.token._id, isDelivered: false, isCanceled: false })
+      .lean()
+      .exec();
+    if (!foundOrders)
+      return sendResponse(req, res, statusCodes.OK, Messages.NO_ORDER_FOUND);
+    sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, foundOrders);
+  } catch (err) {
+    sendErrorResponse(req, res,statusCodes.internalServerError,Messages.internalServerError);
   }
 };

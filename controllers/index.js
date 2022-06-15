@@ -79,5 +79,6 @@ module.exports = {
   getAddOnPage : Merchant.getAddOnPage,
   getAllAddOnsByMerchantId : User.getAllAddOnsByMerchantId,
   placeOrders : User.placeOrders,
-  clearCart : User.clearCart
+  clearCart : User.clearCart,
+  placedOrders : User.placedOrders,
 };
