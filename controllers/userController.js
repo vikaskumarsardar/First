@@ -1052,7 +1052,7 @@ exports.placeOrders = async (req, res) => {
     const newOrder = new orderModel({
       items: foundCart.items,
       total: foundCart.total,
-      userId: foundCart.userID,
+      userId: foundCart.userId,
     });
     foundCart.isPlaced = true;
     await foundCart.save();
@@ -1114,6 +1114,14 @@ exports.placedOrders = async (req, res) => {
       .find({ userID: req.token._id, isDelivered: false, isCanceled: false })
       .lean()
       .exec();
+
+      const productIds = await orderModel.distinct("items._id",{userId : req.token._id}).exec()
+      // const datas = await orderModel.aggregate([
+      //   {
+      //     $unwind : "$items"
+      //   },
+      // ]).exec()
+      console.log(productIds);
     if (!foundOrders)
       return sendResponse(req, res, statusCodes.OK, Messages.NO_ORDER_FOUND);
     sendResponse(req, res, statusCodes.OK, Messages.SUCCESS, foundOrders);

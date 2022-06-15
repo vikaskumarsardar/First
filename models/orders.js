@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const autoIncrement = require('mongoose-auto-increment')
 const orderSchema = new mongoose.Schema(
   {
     items: [{ type: Object, default: {} }],
@@ -19,6 +20,9 @@ const orderSchema = new mongoose.Schema(
     isCanceled : {
       type : Boolean,
       default : false
+    },
+    orderId : {
+      type : Number
     }
 
   },
@@ -26,6 +30,15 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+autoIncrement.initialize(mongoose)
+orderSchema.plugin(autoIncrement.plugin,{
+model:"Orders",
+field : "orderId",
+startAt : 100000,
+incrementBy : 1
+})
+
 
 const orderModel = mongoose.model("Orders", orderSchema);
 module.exports = orderModel;
