@@ -1084,7 +1084,7 @@ exports.placeOrders = async (req, res) => {
 exports.clearCart = async (req, res) => {
   try {
     const cartDeleted = await cartModel
-      .findOneAndUpdate({ userID: req.token._id, isPlaced: false }, { items: [],total : 0 },{new : true})
+      .findOneAndUpdate({ userID: req.token._id, isPlaced: false }, { items: [],total : 0,isPlaced : true },{new : true})
       .lean()
       .exec();
     return cartDeleted
